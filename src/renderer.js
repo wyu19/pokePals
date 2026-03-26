@@ -1,16 +1,14 @@
-const { ipcRenderer } = require('electron');
-
 const sprite = document.getElementById('sprite');
 
 let isDragging = false;
 
 // Disable click-through on the sprite element itself
 sprite.addEventListener('mouseenter', () => {
-  ipcRenderer.send('set-ignore-mouse-events', false);
+  window.electronAPI.setIgnoreMouseEvents(false);
 });
 
 sprite.addEventListener('mouseleave', () => {
-  ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
+  window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
 });
 
 // Manual drag implementation (avoiding -webkit-app-region which blocks context menu)
@@ -24,33 +22,33 @@ sprite.addEventListener('mousedown', (e) => {
   const startX = e.screenX;
   const startY = e.screenY;
   
-  ipcRenderer.send('start-drag', { startX, startY });
+  window.electronAPI.startDrag(startX, startY);
 });
 
 document.addEventListener('mouseup', () => {
   if (isDragging) {
     isDragging = false;
-    ipcRenderer.send('stop-drag');
+    window.electronAPI.stopDrag();
   }
 });
 
 document.addEventListener('mousemove', (e) => {
   if (isDragging) {
-    ipcRenderer.send('drag-move', { screenX: e.screenX, screenY: e.screenY });
+    window.electronAPI.dragMove(e.screenX, e.screenY);
   }
 });
 
 // Right-click context menu
 sprite.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  ipcRenderer.send('show-context-menu');
+  window.electronAPI.showContextMenu();
 });
 
 // Handle menu actions
-ipcRenderer.on('menu-feed', () => {
-  ipcRenderer.send('feed-pokemon');
-});
-
-ipcRenderer.on('menu-play', () => {
-  ipcRenderer.send('play-pokemon');
+window.electronAPI.onMenuAction((action) => {
+  if (action === 'feed') {
+    window.electronAPI.feedPokemon();
+  } else if (action === 'play') {
+    window.electronAPI.playPokemon();
+  }
 });
