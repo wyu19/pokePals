@@ -1,0 +1,50 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
+contextBridge.exposeInMainWorld('electronAPI', {
+  // Send methods - wrapping ipcRenderer.send() calls
+  setIgnoreMouseEvents: (ignore, options) => {
+    ipcRenderer.send('set-ignore-mouse-events', ignore, options);
+  },
+  
+  startDrag: (startX, startY) => {
+    ipcRenderer.send('start-drag', { startX, startY });
+  },
+  
+  dragMove: (screenX, screenY) => {
+    ipcRenderer.send('drag-move', { screenX, screenY });
+  },
+  
+  stopDrag: () => {
+    ipcRenderer.send('stop-drag');
+  },
+  
+  showContextMenu: () => {
+    ipcRenderer.send('show-context-menu');
+  },
+  
+  feedPokemon: () => {
+    ipcRenderer.send('feed-pokemon');
+  },
+  
+  playPokemon: () => {
+    ipcRenderer.send('play-pokemon');
+  },
+  
+  // Receive method - wrapping both menu-feed and menu-play into single callback interface
+  onMenuAction: (callback) => {
+    // Remove any existing listeners to prevent duplicates
+    ipcRenderer.removeAllListeners('menu-feed');
+    ipcRenderer.removeAllListeners('menu-play');
+    
+    // Register listeners that call the callback with action type
+    ipcRenderer.on('menu-feed', () => {
+      callback('feed');
+    });
+    
+    ipcRenderer.on('menu-play', () => {
+      callback('play');
+    });
+  }
+});
