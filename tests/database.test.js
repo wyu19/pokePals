@@ -51,21 +51,27 @@ describe('Database Module', () => {
       
       const columnNames = tableInfo.map(col => col.name);
       expect(columnNames).toContain('id');
+      expect(columnNames).toContain('species');
       expect(columnNames).toContain('hunger');
       expect(columnNames).toContain('happiness');
       expect(columnNames).toContain('x');
       expect(columnNames).toContain('y');
+      expect(columnNames).toContain('active_pokemon');
       
       db.close();
     });
     
     test('creates default pokemon entry', () => {
       const db = new Database(testDbPath);
-      const pokemon = db.prepare("SELECT * FROM pokemon WHERE id = 1").get();
+      const count = db.prepare("SELECT COUNT(*) as count FROM pokemon").get();
       
-      expect(pokemon).toBeDefined();
-      expect(pokemon.hunger).toBe(100);
-      expect(pokemon.happiness).toBe(100);
+      expect(count.count).toBe(3);
+      
+      const bulbasaur = db.prepare("SELECT * FROM pokemon WHERE species = 'bulbasaur'").get();
+      expect(bulbasaur).toBeDefined();
+      expect(bulbasaur.hunger).toBe(100);
+      expect(bulbasaur.happiness).toBe(100);
+      expect(bulbasaur.active_pokemon).toBe(1);
       
       db.close();
     });
@@ -168,6 +174,110 @@ describe('Database Module', () => {
       
       dbModule.saveStats(50, 100);
       expect(dbModule.getStats().happiness).toBe(100);
+    });
+  });
+  
+  describe('multi-Pokemon support', () => {
+    test('seeds database with 3 starters', () => {
+      const all = dbModule.getAllPokemon();
+      
+      expect(all).toHaveLength(3);
+      expect(all[0].species).toBe('bulbasaur');
+      expect(all[1].species).toBe('charmander');
+      expect(all[2].species).toBe('squirtle');
+    });
+    
+    test('bulbasaur is active by default', () => {
+      const active = dbModule.getActivePokemon();
+      
+      expect(active).toBeDefined();
+      expect(active.species).toBe('bulbasaur');
+      expect(active.active_pokemon).toBe(1);
+    });
+    
+    test('setActivePokemon switches active Pokemon', () => {
+      dbModule.setActivePokemon('charmander');
+      const active = dbModule.getActivePokemon();
+      
+      expect(active.species).toBe('charmander');
+      expect(active.active_pokemon).toBe(1);
+    });
+    
+    test('only one Pokemon is active at a time', () => {
+      dbModule.setActivePokemon('squirtle');
+      const all = dbModule.getAllPokemon();
+      
+      const activeCount = all.filter(p => p.active_pokemon === 1).length;
+      expect(activeCount).toBe(1);
+      
+      const activePokemon = all.find(p => p.active_pokemon === 1);
+      expect(activePokemon.species).toBe('squirtle');
+    });
+    
+    test('each Pokemon has independent stats', () => {
+      // Set bulbasaur stats
+      dbModule.setActivePokemon('bulbasaur');
+      dbModule.saveStats(80, 90);
+      
+      // Set charmander stats
+      dbModule.setActivePokemon('charmander');
+      dbModule.saveStats(60, 70);
+      
+      // Verify independence
+      const all = dbModule.getAllPokemon();
+      const bulbasaur = all.find(p => p.species === 'bulbasaur');
+      const charmander = all.find(p => p.species === 'charmander');
+      
+      expect(bulbasaur.hunger).toBe(80);
+      expect(bulbasaur.happiness).toBe(90);
+      expect(charmander.hunger).toBe(60);
+      expect(charmander.happiness).toBe(70);
+    });
+    
+    test('saveStats updates active Pokemon only', () => {
+      dbModule.setActivePokemon('charmander');
+      dbModule.saveStats(50, 50);
+      
+      const all = dbModule.getAllPokemon();
+      const bulbasaur = all.find(p => p.species === 'bulbasaur');
+      const charmander = all.find(p => p.species === 'charmander');
+      
+      // Bulbasaur should still have default stats
+      expect(bulbasaur.hunger).toBe(100);
+      expect(bulbasaur.happiness).toBe(100);
+      
+      // Charmander should have updated stats
+      expect(charmander.hunger).toBe(50);
+      expect(charmander.happiness).toBe(50);
+    });
+    
+    test('each Pokemon has independent position', () => {
+      // Set bulbasaur position
+      dbModule.setActivePokemon('bulbasaur');
+      dbModule.savePosition(100, 200);
+      
+      // Set squirtle position
+      dbModule.setActivePokemon('squirtle');
+      dbModule.savePosition(300, 400);
+      
+      // Verify independence
+      const all = dbModule.getAllPokemon();
+      const bulbasaur = all.find(p => p.species === 'bulbasaur');
+      const squirtle = all.find(p => p.species === 'squirtle');
+      
+      expect(bulbasaur.x).toBe(100);
+      expect(bulbasaur.y).toBe(200);
+      expect(squirtle.x).toBe(300);
+      expect(squirtle.y).toBe(400);
+    });
+    
+    test('returns false when setting non-existent species', () => {
+      const result = dbModule.setActivePokemon('pikachu');
+      expect(result).toBe(false);
+      
+      // Active should remain unchanged
+      const active = dbModule.getActivePokemon();
+      expect(active.species).toBe('bulbasaur');
     });
   });
 });

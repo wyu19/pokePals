@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
-const { initDB, closeDB, savePosition, loadPosition, saveStats, loadStats, getStats } = require('./database');
+const { initDB, closeDB, savePosition, loadPosition, saveStats, loadStats, getStats, getActivePokemon, setActivePokemon, getAllPokemon } = require('./database');
 
 let mainWindow;
 let savePositionTimeout;
@@ -90,6 +90,23 @@ function createWindow() {
 
   // Handle context menu request
   ipcMain.on('show-context-menu', (event) => {
+    // Get all Pokemon to build submenu
+    const allPokemon = getAllPokemon();
+    const activePokemon = getActivePokemon();
+    
+    // Helper function to capitalize species name
+    const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+    
+    // Build Switch Pokémon submenu
+    const switchSubmenu = allPokemon.map(pokemon => ({
+      label: capitalize(pokemon.species),
+      type: 'checkbox',
+      checked: pokemon.active_pokemon === 1,
+      click: () => {
+        event.sender.send('switch-pokemon', pokemon.species);
+      }
+    }));
+    
     const menu = Menu.buildFromTemplate([
       {
         label: 'Feed',
@@ -102,6 +119,10 @@ function createWindow() {
         click: () => {
           event.sender.send('menu-play');
         }
+      },
+      {
+        label: 'Switch Pokémon',
+        submenu: switchSubmenu
       }
     ]);
     menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
@@ -121,6 +142,20 @@ function createWindow() {
     const newHappiness = Math.min(100, stats.happiness + 15);
     saveStats(stats.hunger, newHappiness);
     console.log(`Played with Pokémon! Happiness: ${stats.happiness} → ${newHappiness}`);
+  });
+  
+  // Handle Pokemon switch
+  ipcMain.on('switch-pokemon', (event, species) => {
+    setActivePokemon(species);
+    const active = getActivePokemon();
+    event.sender.send('pokemon-switched', active.species);
+    console.log(`Switched to ${active.species}`);
+  });
+  
+  // Get active Pokemon for animation system
+  ipcMain.handle('get-active-pokemon', async () => {
+    const { getActivePokemon } = require('./database');
+    return getActivePokemon();
   });
 
   mainWindow.on('ready-to-show', () => {

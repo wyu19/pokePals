@@ -32,6 +32,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('play-pokemon');
   },
   
+  switchPokemon: (species) => {
+    ipcRenderer.send('switch-pokemon', species);
+  },
+  
+  // Get active Pokemon (returns Promise)
+  getActivePokemon: () => {
+    return ipcRenderer.invoke('get-active-pokemon');
+  },
+  
   // Receive method - wrapping both menu-feed and menu-play into single callback interface
   onMenuAction: (callback) => {
     // Remove any existing listeners to prevent duplicates
@@ -45,6 +54,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     ipcRenderer.on('menu-play', () => {
       callback('play');
+    });
+  },
+  
+  onPokemonSwitch: (callback) => {
+    // Remove any existing listeners to prevent duplicates
+    ipcRenderer.removeAllListeners('pokemon-switched');
+    
+    // Register listener for pokemon-switched event
+    ipcRenderer.on('pokemon-switched', (event, species) => {
+      callback(species);
     });
   }
 });
