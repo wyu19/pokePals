@@ -12,4 +12,22 @@ body {
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
   cursor: move;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  outline: none;
+  border: none;
+  /* Force hardware acceleration to prevent ghosting */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Prevent any browser default styling on active/focus */
+#sprite:active,
+#sprite:focus {
+  outline: none;
+  border: none;
 }

@@ -33,10 +33,13 @@ function createWindow() {
     transparent: true,
     alwaysOnTop: true,
     resizable: false,
+    backgroundColor: '#00000000', // Explicit transparent background
+    hasShadow: false, // Disable shadow to prevent compositor artifacts
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      offscreen: false // Ensure on-screen rendering
     }
   };
   
@@ -103,7 +106,11 @@ function createWindow() {
       type: 'checkbox',
       checked: pokemon.active_pokemon === 1,
       click: () => {
-        event.sender.send('switch-pokemon', pokemon.species);
+        // Call setActivePokemon and send the result back
+        setActivePokemon(pokemon.species);
+        const active = getActivePokemon();
+        event.sender.send('pokemon-switched', active.species);
+        console.log(`Switched to ${active.species}`);
       }
     }));
     

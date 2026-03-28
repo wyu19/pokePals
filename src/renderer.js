@@ -1,7 +1,6 @@
 const sprite = document.getElementById('sprite');
 
 // Initialize animation state machine
-// Note: AnimationStateMachine is loaded via script tag in renderer.html
 let animationMachine = null;
 
 // Get active Pokemon from main process on load
