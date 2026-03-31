@@ -1,0 +1,47 @@
+{
+  "idle": {
+    "params": {
+      "verticalShift": 2
+    },
+    "fps": 3,
+    "intendedEmotion": "calm presence / breathing",
+    "assessment": {
+      "readable": "clear",
+      "reason": "4px bob at 3 FPS creates visible, gentle breathing motion"
+    }
+  },
+  "drag": {
+    "params": {
+      "tiltDegrees": 4,
+      "squashPercent": 8
+    },
+    "fps": 6,
+    "intendedEmotion": "reluctance / struggle",
+    "assessment": {
+      "readable": "clear",
+      "reason": "±4° tilt + 8% squash at 6 FPS shows responsive struggle"
+    }
+  },
+  "eat": {
+    "params": {
+      "mouthShift": 3
+    },
+    "fps": 2,
+    "intendedEmotion": "satisfaction / chewing",
+    "assessment": {
+      "readable": "clear",
+      "reason": "5px mouth shift at 2 FPS creates deliberate chewing motion"
+    }
+  },
+  "play": {
+    "params": {
+      "bounceDistance": 4
+    },
+    "fps": 4,
+    "intendedEmotion": "joy / playfulness",
+    "assessment": {
+      "readable": "clear",
+      "reason": "7px bounce at 4 FPS creates energetic, joyful motion"
+    }
+  }
+}
