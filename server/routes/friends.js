@@ -196,4 +196,30 @@ router.post('/friends/decline', authenticateToken, (req, res) => {
   }
 });
 
+// Get friend list (bidirectional)
+router.get('/friends', authenticateToken, (req, res) => {
+  const currentUserId = req.user.userId;
+  
+  try {
+    // Bidirectional query: returns each friendship exactly once
+    // regardless of who initiated (requester or addressee)
+    const friends = db.prepare(`
+      SELECT u.id, u.username
+      FROM users u
+      JOIN friendships f ON (
+        (f.requester_id = ? AND f.addressee_id = u.id) OR
+        (f.addressee_id = ? AND f.requester_id = u.id)
+      )
+      WHERE f.status = 'accepted'
+      ORDER BY u.username
+    `).all(currentUserId, currentUserId);
+    
+    console.log(`Fetched ${friends.length} friends for user ${currentUserId}`);
+    res.json(friends);
+  } catch (error) {
+    console.error('Get friends error:', error);
+    res.status(500).json({ error: 'Failed to fetch friends' });
+  }
+});
+
 module.exports = router;

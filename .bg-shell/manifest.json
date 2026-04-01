@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "dcaf5082",
+    "label": "pokepals-server",
+    "command": "cd /Users/wenbinyu/pokePals && node server/index.js",
+    "cwd": "/Users/wenbinyu/pokePals",
+    "ownerSessionFile": "/Users/wenbinyu/.gsd/sessions/--Users-wenbinyu-pokePals--/2026-04-01T17-18-41-480Z_0a26c800-25ea-4847-a57b-8b5fd8af81ae.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1775063972765,
+    "processType": "server",
+    "group": null,
+    "readyPattern": null,
+    "readyPort": 3001,
+    "pid": 99217
+  }
+]
