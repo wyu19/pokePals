@@ -237,3 +237,192 @@ document.addEventListener('keydown', (e) => {
 });
 
 console.log('Multi-sprite renderer initialized. Press Cmd+V to toggle test visitor.');
+
+// === Add Friend Dialog Logic ===
+
+let searchTimeout = null;
+
+// IPC listener for showing Add Friend dialog
+window.electronAPI.onShowAddFriendDialog(() => {
+  console.log('[Friends] Opening Add Friend dialog');
+  openAddFriendDialog();
+});
+
+function openAddFriendDialog() {
+  const dialog = document.getElementById('add-friend-dialog');
+  const searchInput = document.getElementById('friend-search-input');
+  const searchResults = document.getElementById('friend-search-results');
+  const closeButton = document.getElementById('add-friend-close');
+  
+  // Show dialog
+  dialog.style.display = 'flex';
+  
+  // Clear previous search
+  searchInput.value = '';
+  searchResults.innerHTML = '';
+  
+  // Focus search input
+  setTimeout(() => searchInput.focus(), 100);
+  
+  // Attach event listeners
+  searchInput.addEventListener('input', handleSearchInput);
+  closeButton.addEventListener('click', closeAddFriendDialog);
+  
+  // Close on overlay click
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      closeAddFriendDialog();
+    }
+  });
+  
+  // Close on Escape key
+  const escapeHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeAddFriendDialog();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  };
+  document.addEventListener('keydown', escapeHandler);
+}
+
+function closeAddFriendDialog() {
+  const dialog = document.getElementById('add-friend-dialog');
+  const searchInput = document.getElementById('friend-search-input');
+  const searchResults = document.getElementById('friend-search-results');
+  
+  // Clear timeout if active
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
+  
+  // Hide dialog
+  dialog.style.display = 'none';
+  
+  // Clear input and results
+  searchInput.value = '';
+  searchResults.innerHTML = '';
+  
+  console.log('[Friends] Add Friend dialog closed');
+}
+
+function handleSearchInput(e) {
+  const query = e.target.value.trim();
+  const searchResults = document.getElementById('friend-search-results');
+  
+  // Clear existing timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
+  
+  // Don't search if query is too short
+  if (query.length < 2) {
+    searchResults.innerHTML = '';
+    return;
+  }
+  
+  // Debounce: wait 300ms after last keystroke
+  searchTimeout = setTimeout(() => {
+    performSearch(query);
+  }, 300);
+}
+
+async function performSearch(query) {
+  const searchResults = document.getElementById('friend-search-results');
+  
+  try {
+    console.log(`[Friends] Search: q="${query}"`);
+    
+    // Show loading state
+    searchResults.innerHTML = '<div class="search-no-results">Searching...</div>';
+    
+    // Fetch search results
+    const response = await window.auth.authenticatedFetch(`/users/search?q=${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    // Backend returns array directly, not {users: [...]}
+    const users = Array.isArray(data) ? data : [];
+    
+    console.log(`[Friends] Search: q="${query}", found ${users.length} results`);
+    
+    // Render results
+    if (users.length === 0) {
+      searchResults.innerHTML = '<div class="search-no-results">No users found.</div>';
+    } else {
+      renderSearchResults(users);
+    }
+  } catch (error) {
+    console.error('[Friends] Search failed:', error);
+    searchResults.innerHTML = '<div class="search-error">Search failed. Try again.</div>';
+  }
+}
+
+function renderSearchResults(users) {
+  const searchResults = document.getElementById('friend-search-results');
+  
+  // Clear previous results
+  searchResults.innerHTML = '';
+  
+  // Render each user
+  users.forEach(user => {
+    const resultItem = document.createElement('div');
+    resultItem.className = 'search-result-item';
+    
+    const username = document.createElement('span');
+    username.textContent = user.username;
+    
+    const addButton = document.createElement('button');
+    addButton.textContent = 'Add Friend';
+    addButton.dataset.userId = user.id;
+    addButton.addEventListener('click', () => sendFriendRequest(user.id, user.username));
+    
+    resultItem.appendChild(username);
+    resultItem.appendChild(addButton);
+    searchResults.appendChild(resultItem);
+  });
+}
+
+async function sendFriendRequest(targetUserId, targetUsername) {
+  try {
+    console.log(`[Friends] Sending friend request to user ${targetUserId} (${targetUsername})`);
+    
+    const response = await window.auth.authenticatedFetch('/friends/request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ target_user_id: targetUserId }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      // Handle specific error cases
+      if (response.status === 409) {
+        alert('Request already sent or you\'re already friends.');
+      } else if (response.status === 404) {
+        alert('User not found.');
+      } else {
+        alert(data.error || 'Request failed. Try again.');
+      }
+      console.log(`[Friends] Send request failed: ${data.error}`);
+      return;
+    }
+    
+    console.log('[Friends] Friend request sent successfully');
+    
+    // Close dialog on success
+    closeAddFriendDialog();
+    
+    // Optionally show success message
+    alert(`Friend request sent to ${targetUsername}!`);
+  } catch (error) {
+    console.error('[Friends] Send request failed:', error);
+    alert('Request failed. Try again.');
+  }
+}

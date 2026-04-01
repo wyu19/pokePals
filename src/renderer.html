@@ -16,7 +16,22 @@
     <img id="visitor-sprite" class="sprite" draggable="false" alt="Visiting Pokemon">
   </div>
   
+  <!-- Add Friend Dialog -->
+  <div id="add-friend-dialog" class="dialog-overlay" style="display: none;">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 class="dialog-title">Add Friend</h2>
+        <button id="add-friend-close" class="dialog-close">&times;</button>
+      </div>
+      <div class="dialog-body">
+        <input type="text" id="friend-search-input" class="search-input" placeholder="Search by username..." autocomplete="off">
+        <div id="friend-search-results" class="search-results"></div>
+      </div>
+    </div>
+  </div>
+  
   <script src="animation.js"></script>
+  <script src="auth.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
