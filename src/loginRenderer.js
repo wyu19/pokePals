@@ -43,7 +43,7 @@ function init() {
  * Handle form submission
  * @param {Event} e - Submit event
  */
-function handleSubmit(e) {
+async function handleSubmit(e) {
   e.preventDefault();
   
   console.log(`[Auth UI] Form submission attempted in ${currentMode} mode`);
@@ -83,9 +83,51 @@ function handleSubmit(e) {
   console.log(`[Auth UI] Validation passed for ${currentMode} mode`);
   console.log(`[Auth UI] Username: ${username}, Password length: ${password.length}`);
   
-  // In T02, this will call the actual auth API
-  // For now, just log success
-  showSuccess(`${currentMode === 'login' ? 'Login' : 'Registration'} validation successful!`);
+  // Disable submit button during API request
+  submitButton.disabled = true;
+  submitText.textContent = 'CONNECTING...';
+  
+  try {
+    let user;
+    
+    if (currentMode === 'register') {
+      // Register new user
+      const registerResult = await window.auth.register(username, password);
+      console.log(`[Auth UI] Registration successful, now logging in...`);
+      
+      // After successful registration, login to get token
+      user = await window.auth.login(username, password);
+    } else {
+      // Login existing user
+      user = await window.auth.login(username, password);
+    }
+    
+    console.log(`[Auth UI] Authentication successful for user: ${user.username} (ID: ${user.userId})`);
+    showSuccess(`Welcome, ${user.username}!`);
+    
+    // TODO: In T03, trigger transition to main overlay window
+    // For now, just show success message
+    setTimeout(() => {
+      console.log('[Auth UI] Would transition to main app window here');
+    }, 1500);
+    
+  } catch (error) {
+    console.error('[Auth UI] Authentication failed:', error);
+    
+    // Display error message from backend
+    let errorMessage = error.message;
+    
+    // Handle network errors
+    if (error.message === 'Failed to fetch') {
+      errorMessage = 'Server unreachable. Please check if backend is running.';
+    }
+    
+    showError(errorMessage);
+    
+    // Re-enable submit button
+    submitButton.disabled = false;
+    submitText.textContent = currentMode === 'login' ? 'LOGIN' : 'REGISTER';
+  }
 }
 
 /**
