@@ -136,11 +136,17 @@ async function validateToken() {
 }
 
 /**
- * Logout current user - clear stored token
+ * Logout current user - clear stored token and return to login screen
  */
 function logout() {
   console.log('[Auth] Logging out, clearing token');
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  
+  // Notify main process to reload login screen
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.logout) {
+    console.log('[Auth] Triggering logout IPC event');
+    window.electronAPI.logout();
+  }
 }
 
 /**
@@ -176,10 +182,10 @@ async function authenticatedFetch(url, options = {}) {
       headers,
     });
     
-    // Detect token expiration
+    // Detect token expiration - automatically logout
     if (response.status === 401 || response.status === 403) {
-      console.log('[Auth] Authentication failed (401/403), clearing token');
-      localStorage.removeItem(AUTH_TOKEN_KEY);
+      console.log('[Auth] Authentication failed (401/403), triggering logout');
+      logout(); // This will clear token and trigger IPC to reload login screen
     }
     
     return response;

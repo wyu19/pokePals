@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "4789410b",
+    "label": "backend-server",
+    "command": "cd /Users/wenbinyu/pokePals && npm run server",
+    "cwd": "/Users/wenbinyu/pokePals",
+    "ownerSessionFile": "/Users/wenbinyu/.gsd/sessions/--Users-wenbinyu-pokePals--/2026-04-01T03-44-36-596Z_eaf7853b-24d9-4196-9434-b741bc2ebbcb.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1775015173143,
+    "processType": "server",
+    "group": null,
+    "readyPattern": null,
+    "readyPort": 3000,
+    "pid": 12743
+  }
+]

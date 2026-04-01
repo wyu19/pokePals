@@ -36,6 +36,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('switch-pokemon', species);
   },
   
+  // Auth lifecycle events
+  loginSuccess: () => {
+    ipcRenderer.send('login-success');
+  },
+  
+  logout: () => {
+    ipcRenderer.send('logout');
+  },
+  
   // Get active Pokemon (returns Promise)
   getActivePokemon: () => {
     return ipcRenderer.invoke('get-active-pokemon');

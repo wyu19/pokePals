@@ -37,6 +37,37 @@ function init() {
   passwordInput.addEventListener('input', clearError);
   
   console.log('[Auth UI] Login form initialized in login mode');
+  
+  // Auto-validate token on startup
+  autoValidateToken();
+}
+
+/**
+ * Auto-validate stored token on page load
+ * If valid token exists, automatically transition to main app
+ */
+async function autoValidateToken() {
+  console.log('[Auth UI] Checking for existing valid token...');
+  
+  try {
+    const user = await window.auth.validateToken();
+    
+    if (user) {
+      console.log(`[Auth UI] Valid token found for user: ${user.username} (ID: ${user.userId})`);
+      showSuccess(`Welcome back, ${user.username}!`);
+      
+      // Transition to main app
+      setTimeout(() => {
+        console.log('[Auth UI] Auto-login successful, transitioning to main app');
+        window.electronAPI.loginSuccess();
+      }, 500);
+    } else {
+      console.log('[Auth UI] No valid token found, showing login form');
+    }
+  } catch (error) {
+    console.error('[Auth UI] Auto-validation error:', error);
+    // Silently fail - user will just see login form
+  }
 }
 
 /**
@@ -105,10 +136,10 @@ async function handleSubmit(e) {
     console.log(`[Auth UI] Authentication successful for user: ${user.username} (ID: ${user.userId})`);
     showSuccess(`Welcome, ${user.username}!`);
     
-    // TODO: In T03, trigger transition to main overlay window
-    // For now, just show success message
+    // Transition to main overlay window
     setTimeout(() => {
-      console.log('[Auth UI] Would transition to main app window here');
+      console.log('[Auth UI] Login successful, transitioning to main app');
+      window.electronAPI.loginSuccess();
     }, 1500);
     
   } catch (error) {

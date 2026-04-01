@@ -51,7 +51,9 @@ function createWindow() {
   
   mainWindow = new BrowserWindow(windowOptions);
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer.html'));
+  // Always start with login screen - it will auto-validate token and transition if valid
+  console.log('[Main] Loading login screen...');
+  mainWindow.loadFile(path.join(__dirname, 'login.html'));
 
   // DevTools disabled - S02 verified and complete
   // mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -65,6 +67,18 @@ function createWindow() {
     if (win) {
       win.setIgnoreMouseEvents(ignore, options);
     }
+  });
+
+  // Handle login success - transition from login screen to overlay
+  ipcMain.on('login-success', () => {
+    console.log('[Main] Login successful, loading overlay...');
+    mainWindow.loadFile(path.join(__dirname, 'renderer.html'));
+  });
+
+  // Handle logout - return to login screen
+  ipcMain.on('logout', () => {
+    console.log('[Main] Logout requested, loading login screen...');
+    mainWindow.loadFile(path.join(__dirname, 'login.html'));
   });
 
   // Handle manual drag events
