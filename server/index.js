@@ -4,6 +4,7 @@ const cors = require('cors');
 const db = require('./database');
 const authRouter = require('./routes/auth');
 const friendsRouter = require('./routes/friends');
+const visitsRouter = require('./routes/visits');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api', friendsRouter);
+app.use('/api', visitsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
