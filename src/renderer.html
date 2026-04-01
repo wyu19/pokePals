@@ -6,7 +6,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <img id="sprite" src="assets/sprites/bulbasaur/idle-1.png" alt="Pokemon">
+  <!-- Host sprite (main pet) -->
+  <div id="host-container" style="position: absolute;">
+    <img id="host-sprite" class="sprite" src="assets/sprites/bulbasaur/idle-1.png" alt="Pokemon" draggable="false">
+  </div>
+  
+  <!-- Visitor sprite (friend's pet, initially hidden) -->
+  <div id="visitor-container" style="position: absolute; display: none;">
+    <img id="visitor-sprite" class="sprite" draggable="false" alt="Visiting Pokemon">
+  </div>
+  
   <script src="animation.js"></script>
   <script src="renderer.js"></script>
 </body>

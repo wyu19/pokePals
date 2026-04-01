@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PokePals - Authentication</title>
+  <link rel="stylesheet" href="login.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-header">
+      <h1 class="auth-title">
+        <span class="title-glyph">◈</span>
+        <span class="title-text">POKEPALS</span>
+        <span class="title-glyph">◈</span>
+      </h1>
+      <div class="auth-subtitle" id="auth-mode-label">INITIALIZE CONNECTION</div>
+    </div>
+
+    <form id="auth-form" class="auth-form" novalidate>
+      <div class="form-group">
+        <label for="username" class="form-label">
+          <span class="label-icon">►</span>
+          <span class="label-text">TRAINER ID</span>
+        </label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username"
+          class="form-input"
+          placeholder="trainer_name"
+          pattern="[a-zA-Z0-9_]{3,20}"
+          required
+          autocomplete="username"
+          spellcheck="false"
+        >
+        <div class="input-hint">3-20 characters (letters, numbers, underscore)</div>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">
+          <span class="label-icon">►</span>
+          <span class="label-text">ACCESS CODE</span>
+        </label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password"
+          class="form-input"
+          placeholder="••••••••"
+          minlength="8"
+          required
+          autocomplete="current-password"
+        >
+        <div class="input-hint">Minimum 8 characters</div>
+      </div>
+
+      <div class="error-container" id="error-message" role="alert" aria-live="polite"></div>
+
+      <button type="submit" class="submit-button">
+        <span class="button-bracket">[</span>
+        <span class="button-text" id="submit-text">LOGIN</span>
+        <span class="button-bracket">]</span>
+      </button>
+
+      <div class="mode-toggle">
+        <span class="toggle-prompt">Need access?</span>
+        <a href="#" id="mode-toggle-link" class="toggle-link">Create new profile</a>
+      </div>
+    </form>
+
+    <div class="decorative-scanline"></div>
+  </div>
+
+  <script src="loginRenderer.js"></script>
+</body>
+</html>

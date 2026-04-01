@@ -41,11 +41,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke('get-active-pokemon');
   },
   
+  // Get current window position (returns Promise)
+  getPosition: () => {
+    return ipcRenderer.invoke('get-position');
+  },
+  
   // Receive method - wrapping both menu-feed and menu-play into single callback interface
   onMenuAction: (callback) => {
     // Remove any existing listeners to prevent duplicates
     ipcRenderer.removeAllListeners('menu-feed');
     ipcRenderer.removeAllListeners('menu-play');
+    ipcRenderer.removeAllListeners('menu-toggle-visitor');
     
     // Register listeners that call the callback with action type
     ipcRenderer.on('menu-feed', () => {
@@ -54,6 +60,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     ipcRenderer.on('menu-play', () => {
       callback('play');
+    });
+    
+    ipcRenderer.on('menu-toggle-visitor', () => {
+      callback('toggle-visitor');
     });
   },
   

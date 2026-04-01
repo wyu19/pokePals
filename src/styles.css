@@ -5,17 +5,14 @@ body {
   background: transparent;
 }
 
-#sprite {
+/* Shared sprite styling */
+.sprite {
   width: 256px;
   height: 256px;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  cursor: move;
   display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
   outline: none;
   border: none;
   /* Force hardware acceleration to prevent ghosting */
@@ -25,9 +22,40 @@ body {
   -webkit-backface-visibility: hidden;
 }
 
+/* Sprite containers */
+#host-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 256px;
+  pointer-events: none; /* Let clicks pass through container to sprite */
+}
+
+#visitor-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 256px;
+  pointer-events: none; /* Non-interactive - never block host */
+}
+
+/* Host sprite - interactive */
+#host-sprite {
+  cursor: move;
+  pointer-events: auto; /* Captures mouse events for dragging */
+}
+
+/* Visitor sprite - purely visual */
+#visitor-sprite {
+  cursor: default;
+  pointer-events: none; /* Never blocks interaction with host */
+}
+
 /* Prevent any browser default styling on active/focus */
-#sprite:active,
-#sprite:focus {
+.sprite:active,
+.sprite:focus {
   outline: none;
   border: none;
 }

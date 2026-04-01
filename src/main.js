@@ -27,8 +27,8 @@ function createWindow() {
   console.log(`Bulbasaur stats - Hunger: ${stats.hunger}, Happiness: ${stats.happiness}`);
   
   const windowOptions = {
-    width: 256,
-    height: 256,
+    width: 400,  // Increased to accommodate visitor sprite at offset
+    height: 350, // Increased to accommodate visitor sprite at offset
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -52,6 +52,9 @@ function createWindow() {
   mainWindow = new BrowserWindow(windowOptions);
 
   mainWindow.loadFile(path.join(__dirname, 'renderer.html'));
+
+  // DevTools disabled - S02 verified and complete
+  // mainWindow.webContents.openDevTools({ mode: 'detach' });
 
   // Enable click-through for the window, except when clicking on the sprite
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -130,6 +133,13 @@ function createWindow() {
       {
         label: 'Switch Pokémon',
         submenu: switchSubmenu
+      },
+      { type: 'separator' },
+      {
+        label: '[Debug] Toggle Test Visitor',
+        click: () => {
+          event.sender.send('menu-toggle-visitor');
+        }
       }
     ]);
     menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
@@ -163,6 +173,12 @@ function createWindow() {
   ipcMain.handle('get-active-pokemon', async () => {
     const { getActivePokemon } = require('./database');
     return getActivePokemon();
+  });
+  
+  // Get current window position
+  ipcMain.handle('get-position', async () => {
+    const bounds = mainWindow.getBounds();
+    return { x: bounds.x, y: bounds.y };
   });
 
   mainWindow.on('ready-to-show', () => {

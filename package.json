@@ -4,6 +4,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron src/main.js",
+    "server": "node server/index.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

@@ -26,3 +26,8 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# Server files
+server/.env
+server/node_modules
+server/server.db
