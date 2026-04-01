@@ -1,16 +1,1 @@
-[
-  {
-    "id": "d7910a74",
-    "label": "backend-server",
-    "command": "cd server && node index.js",
-    "cwd": "/Users/wenbinyu/pokePals",
-    "ownerSessionFile": "/Users/wenbinyu/.gsd/sessions/--Users-wenbinyu-pokePals--/2026-04-01T17-57-32-637Z_4903c817-9275-4c50-9e63-2e14ebfb7832.jsonl",
-    "persistAcrossSessions": false,
-    "startedAt": 1775066345018,
-    "processType": "server",
-    "group": "pokepals",
-    "readyPattern": null,
-    "readyPort": 3000,
-    "pid": 9173
-  }
-]
+[]
