@@ -45,6 +45,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('logout');
   },
   
+  // Friends management
+  updateFriendsCache: (friends) => {
+    ipcRenderer.send('update-friends-cache', friends);
+  },
+  
+  onShowAddFriendDialog: (callback) => {
+    ipcRenderer.on('show-add-friend-dialog', callback);
+  },
+  
+  onShowFriendRequestsDialog: (callback) => {
+    ipcRenderer.on('show-friend-requests-dialog', callback);
+  },
+  
   // Get active Pokemon (returns Promise)
   getActivePokemon: () => {
     return ipcRenderer.invoke('get-active-pokemon');

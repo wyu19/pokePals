@@ -56,6 +56,18 @@ async function autoValidateToken() {
       console.log(`[Auth UI] Valid token found for user: ${user.username} (ID: ${user.userId})`);
       showSuccess(`Welcome back, ${user.username}!`);
       
+      // Fetch friends list and update cache in main process
+      try {
+        console.log('[Auth UI] Fetching friends list...');
+        const response = await window.auth.authenticatedFetch('/friends');
+        const friends = await response.json();
+        window.electronAPI.updateFriendsCache(friends);
+        console.log(`[Auth UI] Friends fetched: ${friends.length} friends`);
+      } catch (error) {
+        console.error('[Auth UI] Failed to fetch friends:', error);
+        // Non-critical error - continue with login even if friends fetch fails
+      }
+      
       // Transition to main app
       setTimeout(() => {
         console.log('[Auth UI] Auto-login successful, transitioning to main app');
@@ -135,6 +147,18 @@ async function handleSubmit(e) {
     
     console.log(`[Auth UI] Authentication successful for user: ${user.username} (ID: ${user.userId})`);
     showSuccess(`Welcome, ${user.username}!`);
+    
+    // Fetch friends list and update cache in main process
+    try {
+      console.log('[Auth UI] Fetching friends list...');
+      const response = await window.auth.authenticatedFetch('/friends');
+      const friends = await response.json();
+      window.electronAPI.updateFriendsCache(friends);
+      console.log(`[Auth UI] Friends fetched: ${friends.length} friends`);
+    } catch (error) {
+      console.error('[Auth UI] Failed to fetch friends:', error);
+      // Non-critical error - continue with login even if friends fetch fails
+    }
     
     // Transition to main overlay window
     setTimeout(() => {

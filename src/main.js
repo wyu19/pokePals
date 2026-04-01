@@ -7,6 +7,7 @@ let savePositionTimeout;
 let decayInterval;
 let dragStartPosition = null;
 let windowStartPosition = null;
+let cachedFriends = [];
 
 app.on('ready', () => {
   try {
@@ -108,6 +109,12 @@ function createWindow() {
     windowStartPosition = null;
   });
 
+  // Handle friends cache updates from renderer
+  ipcMain.on('update-friends-cache', (event, friends) => {
+    cachedFriends = friends;
+    console.log(`[Main] Friends cache updated: ${friends.length} friends`);
+  });
+
   // Handle context menu request
   ipcMain.on('show-context-menu', (event) => {
     // Get all Pokemon to build submenu
@@ -131,6 +138,32 @@ function createWindow() {
       }
     }));
     
+    // Build Friends submenu with dynamic friend list
+    const friendsSubmenu = [
+      {
+        label: 'Add Friend...',
+        click: () => {
+          event.sender.send('show-add-friend-dialog');
+        }
+      },
+      {
+        label: 'Friend Requests',
+        click: () => {
+          event.sender.send('show-friend-requests-dialog');
+        }
+      },
+      { type: 'separator' },
+      ...cachedFriends.map(friend => ({
+        label: friend.username,
+        submenu: [
+          {
+            label: 'Send Visit (coming soon)',
+            enabled: false
+          }
+        ]
+      }))
+    ];
+    
     const menu = Menu.buildFromTemplate([
       {
         label: 'Feed',
@@ -147,6 +180,10 @@ function createWindow() {
       {
         label: 'Switch Pokémon',
         submenu: switchSubmenu
+      },
+      {
+        label: 'Friends',
+        submenu: friendsSubmenu
       },
       { type: 'separator' },
       {
