@@ -34,6 +34,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id);
   CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id);
   CREATE INDEX IF NOT EXISTS idx_friendships_status ON friendships(status);
+
+  CREATE TABLE IF NOT EXISTS visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visiting_user_id INTEGER NOT NULL,
+    host_user_id INTEGER NOT NULL,
+    pokemon_species TEXT CHECK(pokemon_species IN ('bulbasaur', 'charmander', 'squirtle')) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    ended_at DATETIME,
+    FOREIGN KEY (visiting_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_visits_host_expires ON visits(host_user_id, expires_at);
+  CREATE INDEX IF NOT EXISTS idx_visits_visitor ON visits(visiting_user_id);
 `);
 
 console.log('Database schema initialized');
