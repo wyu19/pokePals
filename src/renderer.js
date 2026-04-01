@@ -248,6 +248,12 @@ window.electronAPI.onShowAddFriendDialog(() => {
   openAddFriendDialog();
 });
 
+// IPC listener for showing Friend Requests dialog
+window.electronAPI.onShowFriendRequestsDialog(() => {
+  console.log('[Friends] Opening Friend Requests dialog');
+  openFriendRequestsDialog();
+});
+
 function openAddFriendDialog() {
   const dialog = document.getElementById('add-friend-dialog');
   const searchInput = document.getElementById('friend-search-input');
@@ -426,3 +432,214 @@ async function sendFriendRequest(targetUserId, targetUsername) {
     alert('Request failed. Try again.');
   }
 }
+
+// === Friend Requests Dialog Logic ===
+
+function openFriendRequestsDialog() {
+  const dialog = document.getElementById('friend-requests-dialog');
+  const requestsList = document.getElementById('friend-requests-list');
+  const closeButton = document.getElementById('friend-requests-close');
+  
+  // Show dialog
+  dialog.style.display = 'flex';
+  
+  // Load requests
+  loadFriendRequests();
+  
+  // Attach close button listener
+  closeButton.addEventListener('click', closeFriendRequestsDialog);
+  
+  // Close on overlay click
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      closeFriendRequestsDialog();
+    }
+  });
+  
+  // Close on Escape key
+  const escapeHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeFriendRequestsDialog();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  };
+  document.addEventListener('keydown', escapeHandler);
+}
+
+function closeFriendRequestsDialog() {
+  const dialog = document.getElementById('friend-requests-dialog');
+  const requestsList = document.getElementById('friend-requests-list');
+  
+  // Hide dialog
+  dialog.style.display = 'none';
+  
+  // Clear list
+  requestsList.innerHTML = '';
+  
+  console.log('[Friends] Friend Requests dialog closed');
+}
+
+async function loadFriendRequests() {
+  const requestsList = document.getElementById('friend-requests-list');
+  
+  try {
+    // Show loading state
+    requestsList.innerHTML = '<div class="search-no-results">Loading...</div>';
+    
+    const response = await window.auth.authenticatedFetch('/friends/requests');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load requests: ${response.status} ${response.statusText}`);
+    }
+    
+    const requests = await response.json();
+    
+    console.log(`[Friends] Loaded ${requests.length} pending requests`);
+    
+    // Render requests
+    renderFriendRequests(requests);
+  } catch (error) {
+    console.error('[Friends] Failed to load requests:', error);
+    requestsList.innerHTML = '<div class="search-error">Failed to load requests.</div>';
+  }
+}
+
+function renderFriendRequests(requests) {
+  const requestsList = document.getElementById('friend-requests-list');
+  
+  // Clear previous content
+  requestsList.innerHTML = '';
+  
+  // Handle empty state
+  if (requests.length === 0) {
+    requestsList.innerHTML = '<div class="search-no-results">No pending requests.</div>';
+    return;
+  }
+  
+  // Render each request
+  requests.forEach(req => {
+    const requestItem = document.createElement('div');
+    requestItem.className = 'request-item';
+    
+    const username = document.createElement('span');
+    username.textContent = req.requesterUsername;
+    
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'request-actions';
+    
+    const acceptButton = document.createElement('button');
+    acceptButton.className = 'btn-accept';
+    acceptButton.textContent = 'Accept';
+    acceptButton.dataset.friendshipId = req.friendshipId;
+    acceptButton.addEventListener('click', () => acceptFriendRequest(req.friendshipId));
+    
+    const declineButton = document.createElement('button');
+    declineButton.className = 'btn-decline';
+    declineButton.textContent = 'Decline';
+    declineButton.dataset.friendshipId = req.friendshipId;
+    declineButton.addEventListener('click', () => declineFriendRequest(req.friendshipId));
+    
+    actionsDiv.appendChild(acceptButton);
+    actionsDiv.appendChild(declineButton);
+    
+    requestItem.appendChild(username);
+    requestItem.appendChild(actionsDiv);
+    requestsList.appendChild(requestItem);
+  });
+}
+
+async function acceptFriendRequest(friendshipId) {
+  try {
+    console.log(`[Friends] Accepting friend request ${friendshipId}`);
+    
+    const response = await window.auth.authenticatedFetch('/friends/accept', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ friendship_id: friendshipId }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      // Handle specific error cases
+      if (response.status === 403) {
+        alert('You cannot accept this request.');
+      } else if (response.status === 404) {
+        alert('Request not found.');
+      } else {
+        alert(data.error || 'Accept failed. Try again.');
+      }
+      console.log(`[Friends] Accept failed: ${data.error}`);
+      return;
+    }
+    
+    console.log('[Friends] Request accepted');
+    
+    // Refresh friends cache
+    await refreshFriendsCache();
+    
+    // Reload requests to update UI
+    await loadFriendRequests();
+  } catch (error) {
+    console.error('[Friends] Accept failed:', error);
+    alert('Accept failed. Try again.');
+  }
+}
+
+async function declineFriendRequest(friendshipId) {
+  try {
+    console.log(`[Friends] Declining friend request ${friendshipId}`);
+    
+    const response = await window.auth.authenticatedFetch('/friends/decline', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ friendship_id: friendshipId }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      // Handle specific error cases
+      if (response.status === 404) {
+        alert('Request not found.');
+      } else {
+        alert(data.error || 'Decline failed. Try again.');
+      }
+      console.log(`[Friends] Decline failed: ${data.error}`);
+      return;
+    }
+    
+    console.log('[Friends] Request declined');
+    
+    // Reload requests to update UI
+    await loadFriendRequests();
+  } catch (error) {
+    console.error('[Friends] Decline failed:', error);
+    alert('Decline failed. Try again.');
+  }
+}
+
+async function refreshFriendsCache() {
+  try {
+    const response = await window.auth.authenticatedFetch('/friends');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch friends: ${response.status}`);
+    }
+    
+    const friends = await response.json();
+    
+    console.log('[Friends] Cache refreshed');
+    
+    // Update main process cache
+    window.electronAPI.updateFriendsCache(friends);
+  } catch (error) {
+    console.error('[Friends] Cache refresh failed:', error);
+    // Don't block the accept workflow, cache stays stale
+  }
+}
+
