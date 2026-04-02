@@ -18,6 +18,9 @@ console.log('Elements found:', {
 let hostAnimation = null;
 let visitorAnimation = null;
 
+// Track active visit ID for send-home flow
+let currentVisitId = null;
+
 // Get active Pokemon from main process on load
 window.electronAPI.getActivePokemon().then(pokemon => {
   const species = pokemon ? pokemon.species : 'bulbasaur';
@@ -32,6 +35,9 @@ window.electronAPI.getActivePokemon().then(pokemon => {
   hostContainer.style.top = '0px';
   
   console.log('Host animation started');
+  
+  // Check for pending visits after animation system is ready
+  checkPendingVisits();
 }).catch(err => {
   console.error('Error loading active Pokemon:', err);
   // Fallback to bulbasaur
@@ -40,7 +46,46 @@ window.electronAPI.getActivePokemon().then(pokemon => {
   
   hostContainer.style.left = '0px';
   hostContainer.style.top = '0px';
+  
+  // Still check for pending visits even on error
+  checkPendingVisits();
 });
+
+// Check for pending visits from login screen handoff
+function checkPendingVisits() {
+  const pendingVisitsJSON = localStorage.getItem('pendingVisits');
+  if (pendingVisitsJSON) {
+    try {
+      const visits = JSON.parse(pendingVisitsJSON);
+      localStorage.removeItem('pendingVisits');
+      
+      if (visits.length > 0) {
+        const visit = visits[0]; // Handle first active visit
+        console.log(`[Visit] Active visit detected: ${visit.visitorUsername}'s ${visit.pokemonSpecies}`);
+        
+        // Show system notification
+        showVisitNotification(visit.visitorUsername, visit.pokemonSpecies);
+        
+        // Render visitor sprite
+        showVisitor(visit.pokemonSpecies, visit.visitorUsername);
+        
+        // Store visit ID for send-home flow
+        currentVisitId = visit.id;
+      }
+    } catch (error) {
+      console.error('[Visit] Failed to parse pending visits:', error);
+    }
+  }
+}
+
+// Show system notification for visit
+function showVisitNotification(visitorUsername, pokemonSpecies) {
+  const capitalizedSpecies = pokemonSpecies.charAt(0).toUpperCase() + pokemonSpecies.slice(1);
+  window.electronAPI.showNotification({
+    title: 'Pokémon Visit!',
+    body: `${visitorUsername}'s ${capitalizedSpecies} is visiting!`
+  });
+}
 
 // Listen for Pokemon switch events
 window.electronAPI.onPokemonSwitch((species) => {

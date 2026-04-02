@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Notification } = require('electron');
 const path = require('path');
 const { initDB, closeDB, savePosition, loadPosition, saveStats, loadStats, getStats, getActivePokemon, setActivePokemon, getAllPokemon } = require('./database');
 
@@ -113,6 +113,13 @@ function createWindow() {
   ipcMain.on('update-friends-cache', (event, friends) => {
     cachedFriends = friends;
     console.log(`[Main] Friends cache updated: ${friends.length} friends`);
+  });
+  
+  // Handle system notification requests
+  ipcMain.on('show-notification', (event, { title, body }) => {
+    console.log(`[Main] Showing notification: ${title} - ${body}`);
+    const notification = new Notification({ title, body });
+    notification.show();
   });
 
   // Handle context menu request

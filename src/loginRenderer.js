@@ -68,6 +68,18 @@ async function autoValidateToken() {
         // Non-critical error - continue with login even if friends fetch fails
       }
       
+      // Fetch active visits and store for renderer handoff
+      try {
+        console.log('[Auth UI] Fetching active visits...');
+        const visitsResponse = await window.auth.authenticatedFetch('/visits/active');
+        const visits = await visitsResponse.json();
+        localStorage.setItem('pendingVisits', JSON.stringify(visits));
+        console.log(`[Auth UI] Active visits fetched: ${visits.length} visit(s)`);
+      } catch (error) {
+        console.error('[Auth UI] Failed to fetch visits:', error);
+        // Non-critical error - continue with login even if visits fetch fails
+      }
+      
       // Transition to main app
       setTimeout(() => {
         console.log('[Auth UI] Auto-login successful, transitioning to main app');
@@ -158,6 +170,18 @@ async function handleSubmit(e) {
     } catch (error) {
       console.error('[Auth UI] Failed to fetch friends:', error);
       // Non-critical error - continue with login even if friends fetch fails
+    }
+    
+    // Fetch active visits and store for renderer handoff
+    try {
+      console.log('[Auth UI] Fetching active visits...');
+      const visitsResponse = await window.auth.authenticatedFetch('/visits/active');
+      const visits = await visitsResponse.json();
+      localStorage.setItem('pendingVisits', JSON.stringify(visits));
+      console.log(`[Auth UI] Active visits fetched: ${visits.length} visit(s)`);
+    } catch (error) {
+      console.error('[Auth UI] Failed to fetch visits:', error);
+      // Non-critical error - continue with login even if visits fetch fails
     }
     
     // Transition to main overlay window

@@ -107,5 +107,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('send-visit', (event, data) => {
       callback(data);
     });
+  },
+  
+  showNotification: (options) => {
+    ipcRenderer.send('show-notification', options);
   }
 });
