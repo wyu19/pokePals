@@ -1,6 +1,17 @@
 // Multi-Sprite Renderer — M004/S02
 console.log('🎮 Renderer.js loading...');
 
+// Global flag to prevent sprite handlers from enabling click-through when dialogs are open
+let dialogOpen = false;
+
+// Disable click-through immediately when renderer loads
+if (window.electronAPI && window.electronAPI.setIgnoreMouseEvents) {
+  console.log('[Renderer] Disabling click-through on load');
+  window.electronAPI.setIgnoreMouseEvents(false);
+} else {
+  console.error('[Renderer] electronAPI.setIgnoreMouseEvents NOT AVAILABLE!');
+}
+
 // Get sprite elements
 const hostSprite = document.getElementById('host-sprite');
 const visitorSprite = document.getElementById('visitor-sprite');
@@ -171,20 +182,28 @@ let isDragging = false;
 
 // Disable click-through on the host sprite element itself
 hostSprite.addEventListener('mouseenter', () => {
-  window.electronAPI.setIgnoreMouseEvents(false);
+  if (!dialogOpen) {
+    window.electronAPI.setIgnoreMouseEvents(false);
+  }
 });
 
 hostSprite.addEventListener('mouseleave', () => {
-  window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
+  if (!dialogOpen) {
+    window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
+  }
 });
 
 // Visitor sprite event listeners (identical pattern to host)
 visitorSprite.addEventListener('mouseenter', () => {
-  window.electronAPI.setIgnoreMouseEvents(false);
+  if (!dialogOpen) {
+    window.electronAPI.setIgnoreMouseEvents(false);
+  }
 });
 
 visitorSprite.addEventListener('mouseleave', () => {
-  window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
+  if (!dialogOpen) {
+    window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
+  }
 });
 
 visitorSprite.addEventListener('contextmenu', (e) => {
@@ -314,10 +333,15 @@ window.electronAPI.onShowFriendRequestsDialog(() => {
 });
 
 function openAddFriendDialog() {
+  // Set global flag to prevent sprite handlers from interfering
+  dialogOpen = true;
+  
+  // Disable click-through while dialog is open
+  window.electronAPI.setIgnoreMouseEvents(false);
+  
   const dialog = document.getElementById('add-friend-dialog');
   const searchInput = document.getElementById('friend-search-input');
   const searchResults = document.getElementById('friend-search-results');
-  const closeButton = document.getElementById('add-friend-close');
   
   // Show dialog
   dialog.style.display = 'flex';
@@ -329,25 +353,7 @@ function openAddFriendDialog() {
   // Focus search input
   setTimeout(() => searchInput.focus(), 100);
   
-  // Attach event listeners
-  searchInput.addEventListener('input', handleSearchInput);
-  closeButton.addEventListener('click', closeAddFriendDialog);
-  
-  // Close on overlay click
-  dialog.addEventListener('click', (e) => {
-    if (e.target === dialog) {
-      closeAddFriendDialog();
-    }
-  });
-  
-  // Close on Escape key
-  const escapeHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeAddFriendDialog();
-      document.removeEventListener('keydown', escapeHandler);
-    }
-  };
-  document.addEventListener('keydown', escapeHandler);
+  console.log('[Friends] Add Friend dialog opened');
 }
 
 function closeAddFriendDialog() {
@@ -367,6 +373,9 @@ function closeAddFriendDialog() {
   // Clear input and results
   searchInput.value = '';
   searchResults.innerHTML = '';
+  
+  // Clear global flag - allow sprite handlers to manage click-through again
+  dialogOpen = false;
   
   console.log('[Friends] Add Friend dialog closed');
 }
@@ -495,9 +504,13 @@ async function sendFriendRequest(targetUserId, targetUsername) {
 // === Friend Requests Dialog Logic ===
 
 function openFriendRequestsDialog() {
+  // Set global flag to prevent sprite handlers from interfering
+  dialogOpen = true;
+  
   const dialog = document.getElementById('friend-requests-dialog');
-  const requestsList = document.getElementById('friend-requests-list');
-  const closeButton = document.getElementById('friend-requests-close');
+  
+  // Disable click-through while dialog is open
+  window.electronAPI.setIgnoreMouseEvents(false);
   
   // Show dialog
   dialog.style.display = 'flex';
@@ -505,24 +518,7 @@ function openFriendRequestsDialog() {
   // Load requests
   loadFriendRequests();
   
-  // Attach close button listener
-  closeButton.addEventListener('click', closeFriendRequestsDialog);
-  
-  // Close on overlay click
-  dialog.addEventListener('click', (e) => {
-    if (e.target === dialog) {
-      closeFriendRequestsDialog();
-    }
-  });
-  
-  // Close on Escape key
-  const escapeHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeFriendRequestsDialog();
-      document.removeEventListener('keydown', escapeHandler);
-    }
-  };
-  document.addEventListener('keydown', escapeHandler);
+  console.log('[Friends] Friend Requests dialog opened');
 }
 
 function closeFriendRequestsDialog() {
@@ -534,6 +530,9 @@ function closeFriendRequestsDialog() {
   
   // Clear list
   requestsList.innerHTML = '';
+  
+  // Clear global flag - allow sprite handlers to manage click-through again
+  dialogOpen = false;
   
   console.log('[Friends] Friend Requests dialog closed');
 }
@@ -783,4 +782,78 @@ window.electronAPI.onSendHome(async () => {
     alert(`Failed to end visit: ${error.message}`);
   }
 });
+
+// ============================================================================
+// PERMANENT EVENT LISTENERS FOR DIALOGS
+// These are attached once on page load to avoid duplicate listener issues
+// ============================================================================
+
+function initializeDialogListeners() {
+  // Add Friend Dialog event listeners
+  const addFriendDialog = document.getElementById('add-friend-dialog');
+  const addFriendClose = document.getElementById('add-friend-close');
+  const friendSearchInput = document.getElementById('friend-search-input');
+
+  if (addFriendClose) {
+    addFriendClose.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeAddFriendDialog();
+    });
+  }
+
+  if (friendSearchInput) {
+    friendSearchInput.addEventListener('input', handleSearchInput);
+  }
+
+  if (addFriendDialog) {
+    // Close on overlay click
+    addFriendDialog.addEventListener('click', (e) => {
+      if (e.target === addFriendDialog) {
+        closeAddFriendDialog();
+      }
+    });
+  }
+
+  // Close on Escape key (only when dialog is visible)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && addFriendDialog && addFriendDialog.style.display === 'flex') {
+      closeAddFriendDialog();
+    }
+  });
+
+  // Friend Requests Dialog event listeners
+  const friendRequestsDialog = document.getElementById('friend-requests-dialog');
+  const friendRequestsClose = document.getElementById('friend-requests-close');
+
+  if (friendRequestsClose) {
+    friendRequestsClose.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFriendRequestsDialog();
+    });
+  }
+
+  if (friendRequestsDialog) {
+    // Close on overlay click
+    friendRequestsDialog.addEventListener('click', (e) => {
+      if (e.target === friendRequestsDialog) {
+        closeFriendRequestsDialog();
+      }
+    });
+  }
+
+  // Close on Escape key (only when dialog is visible)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && friendRequestsDialog && friendRequestsDialog.style.display === 'flex') {
+      closeFriendRequestsDialog();
+    }
+  });
+
+  console.log('[Renderer] Dialog event listeners initialized');
+}
+
+// Initialize dialog listeners immediately (scripts are at end of body, DOM is ready)
+initializeDialogListeners();
+
 

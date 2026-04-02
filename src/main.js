@@ -56,11 +56,11 @@ function createWindow() {
   console.log('[Main] Loading login screen...');
   mainWindow.loadFile(path.join(__dirname, 'login.html'));
 
-  // DevTools disabled - S02 verified and complete
+  // DevTools disabled - dialog interaction fixed
   // mainWindow.webContents.openDevTools({ mode: 'detach' });
 
-  // Enable click-through for the window, except when clicking on the sprite
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  // Login screen needs full mouse interaction - DO NOT enable click-through yet
+  // Click-through will be enabled when transitioning to overlay in login-success handler
 
   // Handle IPC from renderer to toggle mouse events
   ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
@@ -80,6 +80,9 @@ function createWindow() {
   ipcMain.on('logout', () => {
     console.log('[Main] Logout requested, loading login screen...');
     mainWindow.loadFile(path.join(__dirname, 'login.html'));
+    
+    // Disable click-through for login screen (needs full mouse interaction)
+    mainWindow.setIgnoreMouseEvents(false);
   });
 
   // Handle manual drag events
