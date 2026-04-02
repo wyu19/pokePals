@@ -1,6 +1,3 @@
-// Set environment variables before loading any modules
-process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
-
 const request = require('supertest');
 const express = require('express');
 const db = require('../database');

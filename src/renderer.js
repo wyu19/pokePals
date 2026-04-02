@@ -643,3 +643,51 @@ async function refreshFriendsCache() {
   }
 }
 
+// === Send Visit Flow ===
+
+window.electronAPI.onSendVisit(async ({ hostUserId, hostUsername, pokemonSpecies }) => {
+  try {
+    console.log(`[Visit] Sending ${pokemonSpecies} to visit ${hostUsername}...`);
+    
+    const response = await window.auth.authenticatedFetch('/visits', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        host_user_id: hostUserId,
+        pokemon_species: pokemonSpecies
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      // Handle specific error cases
+      if (response.status === 409) {
+        console.error('[Visit] Host already has a visitor');
+        alert('Host already has a visitor');
+      } else if (response.status === 403) {
+        console.error('[Visit] Not friends with user');
+        alert('Not friends with user');
+      } else if (response.status === 400) {
+        console.error(`[Visit] Bad request: ${data.error}`);
+        alert(data.error || 'Invalid request');
+      } else if (response.status === 404) {
+        console.error('[Visit] Host user not found');
+        alert('Host user not found');
+      } else {
+        console.error(`[Visit] Send failed: ${data.error}`);
+        alert('Failed to send visit');
+      }
+      return;
+    }
+    
+    console.log(`[Visit] Visit sent successfully (expires: ${data.expiresAt})`);
+    alert(`${pokemonSpecies.charAt(0).toUpperCase() + pokemonSpecies.slice(1)} is now visiting ${hostUsername}!`);
+  } catch (error) {
+    console.error('[Visit] Network error:', error);
+    alert('Failed to send visit');
+  }
+});
+

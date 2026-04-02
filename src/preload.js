@@ -97,5 +97,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('pokemon-switched', (event, species) => {
       callback(species);
     });
+  },
+  
+  onSendVisit: (callback) => {
+    // Remove any existing listeners to prevent duplicates
+    ipcRenderer.removeAllListeners('send-visit');
+    
+    // Register listener for send-visit event
+    ipcRenderer.on('send-visit', (event, data) => {
+      callback(data);
+    });
   }
 });

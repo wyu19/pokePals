@@ -1,7 +1,11 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'server.db');
+// Use in-memory database for tests to avoid conflicts
+const dbPath = process.env.NODE_ENV === 'test' 
+  ? ':memory:' 
+  : path.join(__dirname, 'server.db');
+
 const db = new Database(dbPath);
 
 // Enable foreign keys

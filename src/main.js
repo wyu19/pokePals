@@ -157,8 +157,16 @@ function createWindow() {
         label: friend.username,
         submenu: [
           {
-            label: 'Send Visit (coming soon)',
-            enabled: false
+            label: 'Send Visit',
+            enabled: true,
+            click: async () => {
+              const activePokemon = getActivePokemon();
+              event.sender.send('send-visit', {
+                hostUserId: friend.id,
+                hostUsername: friend.username,
+                pokemonSpecies: activePokemon.species
+              });
+            }
           }
         ]
       }))
