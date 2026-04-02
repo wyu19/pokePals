@@ -211,6 +211,19 @@ function createWindow() {
     menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
   });
 
+  // Handle visitor context menu request
+  ipcMain.on('show-visitor-context-menu', (event) => {
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Send Home',
+        click: () => {
+          event.sender.send('send-home');
+        }
+      }
+    ]);
+    menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
+  });
+
   // Handle feed interaction
   ipcMain.on('feed-pokemon', () => {
     const stats = getStats();

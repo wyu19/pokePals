@@ -109,6 +109,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     });
   },
   
+  showVisitorContextMenu: () => {
+    ipcRenderer.send('show-visitor-context-menu');
+  },
+  
+  onSendHome: (callback) => {
+    // Remove any existing listeners to prevent duplicates
+    ipcRenderer.removeAllListeners('send-home');
+    
+    // Register listener for send-home event
+    ipcRenderer.on('send-home', callback);
+  },
+  
   showNotification: (options) => {
     ipcRenderer.send('show-notification', options);
   }

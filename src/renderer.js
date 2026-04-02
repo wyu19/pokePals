@@ -178,6 +178,20 @@ hostSprite.addEventListener('mouseleave', () => {
   window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
 });
 
+// Visitor sprite event listeners (identical pattern to host)
+visitorSprite.addEventListener('mouseenter', () => {
+  window.electronAPI.setIgnoreMouseEvents(false);
+});
+
+visitorSprite.addEventListener('mouseleave', () => {
+  window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
+});
+
+visitorSprite.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  window.electronAPI.showVisitorContextMenu();
+});
+
 // Manual drag implementation (avoiding -webkit-app-region which blocks context menu)
 hostSprite.addEventListener('mousedown', (e) => {
   // Right-click should not start drag
@@ -733,6 +747,40 @@ window.electronAPI.onSendVisit(async ({ hostUserId, hostUsername, pokemonSpecies
   } catch (error) {
     console.error('[Visit] Network error:', error);
     alert('Failed to send visit');
+  }
+});
+
+// === Send Home Flow ===
+
+window.electronAPI.onSendHome(async () => {
+  if (!currentVisitId) {
+    console.error('[Visit] No active visit to end');
+    return;
+  }
+  
+  try {
+    console.log(`[Visit] Ending visit ${currentVisitId}...`);
+    
+    const response = await window.auth.authenticatedFetch('/visits/end', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ visit_id: currentVisitId })
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to end visit');
+    }
+    
+    console.log('[Visit] Visit ended successfully');
+    hideVisitor();
+    currentVisitId = null;
+    alert('Visitor sent home!');
+  } catch (error) {
+    console.error('[Visit] End visit failed:', error);
+    alert(`Failed to end visit: ${error.message}`);
   }
 });
 
