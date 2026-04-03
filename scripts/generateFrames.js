@@ -37,12 +37,12 @@ const TRANSFORMATIONS = {
     { name: 'eat-2', verticalShift: 2, description: 'notice food (+2px forward tilt)' },
     // Frame 3: Grab food - slight lift, hands-raised simulation (food compositing added in T02)
     { name: 'eat-3', verticalShift: 1, description: 'grab food (+1px vertical lift)' },
-    // Frame 4: Bite - mouth opens wider (2px taller vertical stretch in bite region)
-    { name: 'eat-4', verticalShift: 0, mouthOpen: 2, description: 'bite (mouth open +2px, food overlaps)' },
+    // Frame 4: Bite - mouth opens wider (3px taller vertical stretch in bite region)
+    { name: 'eat-4', verticalShift: 0, mouthOpen: 3, description: 'bite (mouth open +3px, food overlaps)' },
     // Frame 5: Chew left - mouth closed, left cheek bulge
-    { name: 'eat-5', verticalShift: 0, cheekBulge: 'left', bulgeAmount: 2, description: 'chew left (left cheek +2px horizontal bulge)' },
+    { name: 'eat-5', verticalShift: 0, cheekBulge: 'left', bulgeAmount: 3, description: 'chew left (left cheek +3px horizontal bulge)' },
     // Frame 6: Chew right - right cheek bulge
-    { name: 'eat-6', verticalShift: 0, cheekBulge: 'right', bulgeAmount: 2, description: 'chew right (right cheek +2px horizontal bulge)' },
+    { name: 'eat-6', verticalShift: 0, cheekBulge: 'right', bulgeAmount: 3, description: 'chew right (right cheek +3px horizontal bulge)' },
     // Frame 7: Happy chew - slight bounce, content expression
     { name: 'eat-7', verticalShift: 1, description: 'happy chew (+1px bounce, satisfied)' },
     // Frame 8: Swallow - head tilts back, satisfied return to idle
@@ -143,6 +143,129 @@ async function applyTiltAndSquash(buffer, tiltDegrees, squashPercent, width, hei
 }
 
 /**
+ * Apply mouth open transformation (vertical stretch in mouth region)
+ */
+async function applyMouthOpen(buffer, openAmount, width, height) {
+  // Define mouth region: center horizontal strip at ~60% height
+  const mouthCenterY = Math.round(height * 0.6);
+  const mouthRegionHeight = Math.round(height * 0.3); // 30% of sprite height
+  const mouthTop = Math.max(0, mouthCenterY - Math.round(mouthRegionHeight / 2));
+  const mouthBottom = Math.min(height, mouthTop + mouthRegionHeight);
+  const actualMouthHeight = mouthBottom - mouthTop;
+
+  // Extract mouth region
+  const mouthRegion = await sharp(buffer)
+    .extract({ left: 0, top: mouthTop, width: width, height: actualMouthHeight })
+    .resize(width, actualMouthHeight + openAmount, { kernel: 'nearest', fit: 'fill' })
+    .toBuffer();
+
+  // Create canvas and composite: top region + stretched mouth + bottom region
+  const canvas = await sharp({
+    create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+  }).png().toBuffer();
+
+  // Extract top region (above mouth)
+  const topRegion = await sharp(buffer)
+    .extract({ left: 0, top: 0, width: width, height: mouthTop })
+    .toBuffer();
+
+  // Extract bottom region (below mouth)
+  const bottomHeight = height - mouthBottom;
+  const bottomRegion = bottomHeight > 0 ? await sharp(buffer)
+    .extract({ left: 0, top: mouthBottom, width: width, height: bottomHeight })
+    .toBuffer() : null;
+
+  // Composite all regions
+  const compositeOps = [
+    { input: topRegion, top: 0, left: 0 },
+    { input: mouthRegion, top: mouthTop, left: 0 }
+  ];
+  if (bottomRegion) {
+    compositeOps.push({ input: bottomRegion, top: mouthTop + actualMouthHeight + openAmount, left: 0 });
+  }
+
+  return sharp(canvas).composite(compositeOps).png({ compressionLevel: 9 }).toBuffer();
+}
+
+/**
+ * Apply cheek bulge transformation (horizontal expansion in cheek region)
+ */
+async function applyCheekBulge(buffer, side, bulgeAmount, width, height) {
+  // Define cheek region: side strip at ~50-70% height
+  const cheekTop = Math.round(height * 0.5);
+  const cheekHeight = Math.round(height * 0.25); // 25% of sprite height
+  const cheekWidth = Math.round(width * 0.35); // 35% of sprite width
+  
+  // Extract full sprite regions
+  const topRegion = await sharp(buffer)
+    .extract({ left: 0, top: 0, width: width, height: cheekTop })
+    .toBuffer();
+
+  const bottomRegion = await sharp(buffer)
+    .extract({ left: 0, top: cheekTop + cheekHeight, width: width, height: height - cheekTop - cheekHeight })
+    .toBuffer();
+
+  // Extract and expand the cheek region horizontally
+  const middleRegion = await sharp(buffer)
+    .extract({ left: 0, top: cheekTop, width: width, height: cheekHeight })
+    .toBuffer();
+
+  // Expand the middle region horizontally on the appropriate side
+  let expandedMiddle;
+  if (side === 'left') {
+    // Shift middle region left by bulgeAmount
+    expandedMiddle = await sharp({
+      create: { width, height: cheekHeight, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+    })
+    .composite([{ input: middleRegion, top: 0, left: -bulgeAmount }])
+    .png()
+    .toBuffer();
+  } else {
+    // Shift middle region right by bulgeAmount
+    expandedMiddle = await sharp({
+      create: { width, height: cheekHeight, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+    })
+    .composite([{ input: middleRegion, top: 0, left: bulgeAmount }])
+    .png()
+    .toBuffer();
+  }
+
+  // Reassemble: top + expanded middle + bottom
+  const canvas = await sharp({
+    create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+  }).png().toBuffer();
+
+  return sharp(canvas)
+    .composite([
+      { input: topRegion, top: 0, left: 0 },
+      { input: expandedMiddle, top: cheekTop, left: 0 },
+      { input: bottomRegion, top: cheekTop + cheekHeight, left: 0 }
+    ])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+/**
+ * Composite food sprite at mouth position
+ */
+async function compositeFoodSprite(buffer, foodBuffer, verticalShift, width, height) {
+  // Mouth center approximation: (width/2, height*0.6)
+  // Adjust for verticalShift applied to base sprite
+  const mouthCenterX = Math.round(width / 2);
+  const mouthCenterY = Math.round(height * 0.6) + Math.round(verticalShift);
+  
+  // Get food sprite dimensions
+  const foodMeta = await sharp(foodBuffer).metadata();
+  const foodLeft = mouthCenterX - Math.round(foodMeta.width / 2);
+  const foodTop = mouthCenterY - Math.round(foodMeta.height / 2);
+
+  return sharp(buffer)
+    .composite([{ input: foodBuffer, top: foodTop, left: foodLeft }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+/**
  * Generate frames for a specific animation state
  */
 async function generateStateFrames(species, state, baseSpritePath) {
@@ -156,15 +279,25 @@ async function generateStateFrames(species, state, baseSpritePath) {
   const metadata = await sharp(baseBuffer).metadata();
   const { width, height } = metadata;
 
+  // Load food sprite if this is an eat animation
+  let foodBuffer = null;
+  if (state === 'eat') {
+    const foodPath = path.join(SPRITES_DIR, species, 'food.png');
+    if (fs.existsSync(foodPath)) {
+      foodBuffer = fs.readFileSync(foodPath);
+    } else {
+      console.warn(`⚠️  Food sprite not found: ${foodPath} - skipping food compositing`);
+    }
+  }
+
   console.log(`\nGenerating ${state} frames for ${species}:`);
 
   for (const transform of transformations) {
     let transformedBuffer;
 
-    if (state === 'idle' || state === 'eat' || state === 'play') {
+    if (state === 'idle' || state === 'play') {
       // Simple vertical shift
-      // Use ?? instead of || to handle 0 correctly
-      const shiftAmount = transform.verticalShift ?? transform.mouthShift ?? transform.bounceDistance ?? 0;
+      const shiftAmount = transform.verticalShift ?? transform.bounceDistance ?? 0;
       transformedBuffer = await applyVerticalShift(baseBuffer, shiftAmount, width, height);
       console.log(`  ✓ ${transform.name}.png - ${transform.description}`);
     } else if (state === 'drag') {
@@ -177,6 +310,41 @@ async function generateStateFrames(species, state, baseSpritePath) {
         height
       );
       console.log(`  ✓ ${transform.name}.png - ${transform.description}`);
+    } else if (state === 'eat') {
+      // Complex eat transformations
+      const shiftAmount = transform.verticalShift ?? 0;
+      
+      // Start with base or shifted base
+      if (shiftAmount !== 0) {
+        transformedBuffer = await applyVerticalShift(baseBuffer, shiftAmount, width, height);
+      } else {
+        transformedBuffer = Buffer.from(baseBuffer);
+      }
+
+      // Apply mouth open if specified
+      if (transform.mouthOpen) {
+        transformedBuffer = await applyMouthOpen(transformedBuffer, transform.mouthOpen, width, height);
+      }
+
+      // Apply cheek bulge if specified
+      if (transform.cheekBulge) {
+        transformedBuffer = await applyCheekBulge(
+          transformedBuffer,
+          transform.cheekBulge,
+          transform.bulgeAmount,
+          width,
+          height
+        );
+      }
+
+      // Composite food sprite for frames 3-6 (grab, bite, chew-left, chew-right)
+      const frameName = transform.name;
+      const shouldCompositeFood = foodBuffer && ['eat-3', 'eat-4', 'eat-5', 'eat-6'].includes(frameName);
+      if (shouldCompositeFood) {
+        transformedBuffer = await compositeFoodSprite(transformedBuffer, foodBuffer, shiftAmount, width, height);
+      }
+
+      console.log(`  ✓ ${transform.name}.png - ${transform.description}${shouldCompositeFood ? ' + food sprite' : ''}`);
     }
 
     // Write to disk
