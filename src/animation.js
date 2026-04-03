@@ -11,11 +11,11 @@ class AnimationStateMachine {
     this.isRunning = false;
     this.animationFrameId = null;
     
-    // Frame counts per state (2 frames each for MVP)
+    // Frame counts per state
     this.frameCounts = {
       idle: 2,
       drag: 2,
-      eat: 2,
+      eat: 8,      // 8-frame feed sequence
       play: 2
     };
     
@@ -23,7 +23,7 @@ class AnimationStateMachine {
     this.stateFPS = {
       idle: 3,     // 3 FPS for subtle idle loop
       drag: 6,     // 6 FPS for drag (faster for responsiveness)
-      eat: 2,      // 2 FPS for eating animation
+      eat: 4,      // 4 FPS for eating animation (~2s total loop)
       play: 4      // 4 FPS for play animation
     };
     
