@@ -16,7 +16,7 @@ class AnimationStateMachine {
       idle: 2,
       drag: 2,
       eat: 8,      // 8-frame feed sequence
-      play: 2
+      play: 8      // 8-frame play sequence
     };
     
     // FPS per state
