@@ -80,7 +80,7 @@ async function main() {
     'idle': 2,
     'drag': 2,
     'eat': 8,
-    'play': 2
+    'play': 8
   }[animationState];
 
   if (!frameCount) {

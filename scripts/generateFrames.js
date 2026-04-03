@@ -49,8 +49,14 @@ const TRANSFORMATIONS = {
     { name: 'eat-8', verticalShift: -2, description: 'swallow (head tilt back -2px, satisfied)' }
   ],
   play: [
-    { name: 'play-1', bounceDistance: 4, description: 'bounce up 4px' },
-    { name: 'play-2', bounceDistance: -3, description: 'bounce down 3px' }
+    { name: 'play-1', verticalShift: 0, description: 'idle base pose' },
+    { name: 'play-2', verticalShift: 1, description: 'get excited (+1px forward lean)' },
+    { name: 'play-3', verticalShift: 2, description: 'start play motion (+2px lift, hop prep)' },
+    { name: 'play-4', verticalShift: 4, description: 'hop up (+4px rise, feet off ground)' },
+    { name: 'play-5', tiltDegrees: 4, verticalShift: 4, description: 'mid-air tilt (+4° rotation at peak)' },
+    { name: 'play-6', squashPercent: 8, description: 'land bounce (8% squash on landing)' },
+    { name: 'play-7', verticalShift: 1, description: 'playful paw (+1px bounce, arm forward)' },
+    { name: 'play-8', verticalShift: 0, description: 'return to happy idle' }
   ]
 };
 
@@ -295,10 +301,28 @@ async function generateStateFrames(species, state, baseSpritePath) {
   for (const transform of transformations) {
     let transformedBuffer;
 
-    if (state === 'idle' || state === 'play') {
+    if (state === 'idle') {
       // Simple vertical shift
-      const shiftAmount = transform.verticalShift ?? transform.bounceDistance ?? 0;
+      const shiftAmount = transform.verticalShift ?? 0;
       transformedBuffer = await applyVerticalShift(baseBuffer, shiftAmount, width, height);
+      console.log(`  ✓ ${transform.name}.png - ${transform.description}`);
+    } else if (state === 'play') {
+      // Play animations: can have verticalShift, tiltDegrees+squashPercent, or combined
+      if (transform.tiltDegrees || transform.squashPercent) {
+        // Apply tilt/squash first
+        const tilt = transform.tiltDegrees ?? 0;
+        const squash = transform.squashPercent ?? 0;
+        transformedBuffer = await applyTiltAndSquash(baseBuffer, tilt, squash, width, height);
+        
+        // Then apply vertical shift if present
+        if (transform.verticalShift) {
+          transformedBuffer = await applyVerticalShift(transformedBuffer, transform.verticalShift, width, height);
+        }
+      } else {
+        // Just vertical shift
+        const shiftAmount = transform.verticalShift ?? 0;
+        transformedBuffer = await applyVerticalShift(baseBuffer, shiftAmount, width, height);
+      }
       console.log(`  ✓ ${transform.name}.png - ${transform.description}`);
     } else if (state === 'drag') {
       // Tilt and squash
