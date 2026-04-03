@@ -1,0 +1,46 @@
+Frame 1 – Idle (Base)
+Same pose as your image
+Eyes open, small happy smile
+Arms relaxed at sides
+Tail flame flickering if tail exists
+
+Frame 2 – Get Excited
+Eyes widen slightly
+Mouth opens into a grin
+Body leans forward (1 pixel)
+Arms lift slightly
+
+Frame 3 – Start Play Motion
+One foot lifts (preparing to hop)
+Arms raise higher
+Tail flicks upward more
+Eyes focused forward
+
+Frame 4 – Hop Up
+Body moves up (1–2 pixels)
+Both feet off ground
+Arms lifted outward
+Mouth open, excited expression
+
+Frame 5 – Mid-Air Play
+Slight tilt to body (1 pixel angle feel)
+Tail curves dynamically
+Eyes bright, playful
+
+Frame 6 – Land Bounce
+Feet touch ground
+Body squashes slightly (1 pixel shorter)
+Arms dip down
+Mouth still smiling
+
+Frame 7 – Playful Action
+One arm reaches forward (like batting or pawing)
+Head tilts slightly
+Eyes squint happily
+Tail swishes
+
+Frame 8 – Return to Happy Idle
+Body straightens back to base pose
+Arms relax
+Smile softens to neutral happy
+Tail flame returns to gentle flicker

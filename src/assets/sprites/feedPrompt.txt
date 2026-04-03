@@ -1,0 +1,33 @@
+Frame 1 – Idle (Base)
+Same pose as your image
+Eyes open, neutral smile
+Arms relaxed at sides
+Tail flame flickering
+Frame 2 – Notice Food
+Eyes widen slightly
+Head tilts forward a bit
+One arm lifts slightly
+Frame 3 – Grab Food
+Small pixel “food” (berry or meat chunk) appears near mouth
+Both hands raised holding food
+Mouth slightly open
+Frame 4 – Bite
+Mouth open wider (1–2 pixels taller)
+Food overlaps mouth
+Eyes squint happily
+Frame 5 – Chew (Left)
+Mouth closed
+Cheek bulge on left (1–2 pixels out)
+Eyes relaxed
+Frame 6 – Chew (Right)
+Cheek bulge switches to right
+Tiny head shift (1 pixel)
+Frame 7 – Happy Chew
+Small smile
+Eyes closed (content expression)
+Slight body bounce (1 pixel up)
+Frame 8 – Swallow + Satisfied
+Head tilts back slightly
+Mouth small “o”
+Then returns to smile
+Loop back to Frame 1
