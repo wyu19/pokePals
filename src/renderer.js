@@ -104,7 +104,51 @@ window.electronAPI.onPokemonSwitch((species) => {
 
 // === Multi-Sprite Visitor Functions ===
 
-function addVisitor(visit) {
+// Fade-in animation: 0% → 100% opacity over 8 frames at 6 FPS (~1333ms)
+async function fadeIn(sprite, visitId) {
+  const startTime = Date.now();
+  console.log(`[Visit] Fade-in started for visitor ${visitId}`);
+  
+  const frameCount = 8;
+  const fps = 6;
+  const frameDuration = 1000 / fps; // ~167ms per frame
+  
+  for (let frame = 0; frame <= frameCount; frame++) {
+    const opacity = frame / frameCount;
+    sprite.style.opacity = opacity.toString();
+    
+    if (frame < frameCount) {
+      await new Promise(resolve => setTimeout(resolve, frameDuration));
+    }
+  }
+  
+  const elapsed = Date.now() - startTime;
+  console.log(`[Visit] Fade-in complete for visitor ${visitId} (${elapsed}ms)`);
+}
+
+// Fade-out animation: 100% → 0% opacity over 8 frames at 6 FPS (~1333ms)
+async function fadeOut(sprite, visitId) {
+  const startTime = Date.now();
+  console.log(`[Visit] Fade-out started for visitor ${visitId}`);
+  
+  const frameCount = 8;
+  const fps = 6;
+  const frameDuration = 1000 / fps; // ~167ms per frame
+  
+  for (let frame = frameCount; frame >= 0; frame--) {
+    const opacity = frame / frameCount;
+    sprite.style.opacity = opacity.toString();
+    
+    if (frame > 0) {
+      await new Promise(resolve => setTimeout(resolve, frameDuration));
+    }
+  }
+  
+  const elapsed = Date.now() - startTime;
+  console.log(`[Visit] Fade-out complete for visitor ${visitId} (${elapsed}ms)`);
+}
+
+async function addVisitor(visit) {
   const { id: visitId, visitorUsername, pokemonSpecies } = visit;
   
   console.log(`[Visit] Adding visitor ${visitId}: ${visitorUsername}'s ${pokemonSpecies}`);
@@ -129,6 +173,7 @@ function addVisitor(visit) {
   sprite.draggable = false;
   sprite.alt = `${visitorUsername}'s ${pokemonSpecies}`;
   sprite.dataset.visitId = visitId; // Attach visitId for context menu
+  sprite.style.opacity = '0'; // Start invisible for fade-in
   
   container.appendChild(sprite);
   document.body.appendChild(container);
@@ -141,10 +186,9 @@ function addVisitor(visit) {
   container.style.left = `${xOffset}px`;
   container.style.top = `${yOffset}px`;
   
-  // Create animation state machine
+  // Create animation state machine and set to 'play' but don't start yet
   const animation = new AnimationStateMachine(pokemonSpecies, sprite);
   animation.setState('play'); // Visitors play together
-  animation.start();
   
   // Attach context menu handler
   sprite.addEventListener('contextmenu', (e) => {
@@ -163,9 +207,13 @@ function addVisitor(visit) {
   });
   
   console.log(`[Visit] Visitor ${visitId} added at position (${xOffset}, ${yOffset}). Total visitors: ${visitors.length}`);
+  
+  // Fade in, then start animation
+  await fadeIn(sprite, visitId);
+  animation.start();
 }
 
-function removeVisitor(visitId) {
+async function removeVisitor(visitId) {
   console.log(`[Visit] Removing visitor ${visitId}`);
   
   const index = visitors.findIndex(v => v.visitId === visitId);
@@ -175,8 +223,12 @@ function removeVisitor(visitId) {
     return;
   }
   
-  // Stop animation and remove DOM
   const visitor = visitors[index];
+  
+  // Fade out before cleanup
+  await fadeOut(visitor.sprite, visitId);
+  
+  // Stop animation and remove DOM
   visitor.animation.stop();
   visitor.container.remove();
   
