@@ -14,23 +14,18 @@ if (window.electronAPI && window.electronAPI.setIgnoreMouseEvents) {
 
 // Get sprite elements
 const hostSprite = document.getElementById('host-sprite');
-const visitorSprite = document.getElementById('visitor-sprite');
 const hostContainer = document.getElementById('host-container');
-const visitorContainer = document.getElementById('visitor-container');
 
 console.log('Elements found:', {
   hostSprite: !!hostSprite,
-  visitorSprite: !!visitorSprite,
-  hostContainer: !!hostContainer,
-  visitorContainer: !!visitorContainer
+  hostContainer: !!hostContainer
 });
 
 // Initialize animation state machines
 let hostAnimation = null;
-let visitorAnimation = null;
 
-// Track active visit ID for send-home flow
-let currentVisitId = null;
+// Track active visitors (replaces singleton visitorAnimation/currentVisitId pattern)
+const visitors = [];
 
 // Get active Pokemon from main process on load
 window.electronAPI.getActivePokemon().then(pokemon => {
@@ -71,17 +66,18 @@ function checkPendingVisits() {
       localStorage.removeItem('pendingVisits');
       
       if (visits.length > 0) {
-        const visit = visits[0]; // Handle first active visit
-        console.log(`[Visit] Active visit detected: ${visit.visitorUsername}'s ${visit.pokemonSpecies}`);
+        console.log(`[Visit] ${visits.length} active visit(s) detected`);
         
-        // Show system notification
-        showVisitNotification(visit.visitorUsername, visit.pokemonSpecies);
-        
-        // Render visitor sprite
-        showVisitor(visit.pokemonSpecies, visit.visitorUsername);
-        
-        // Store visit ID for send-home flow
-        currentVisitId = visit.id;
+        // Iterate all visits and add each one
+        visits.forEach(visit => {
+          console.log(`[Visit] Processing visit: ${visit.visitorUsername}'s ${visit.pokemonSpecies}`);
+          
+          // Show system notification for each visit
+          showVisitNotification(visit.visitorUsername, visit.pokemonSpecies);
+          
+          // Add visitor sprite
+          addVisitor(visit);
+        });
       }
     } catch (error) {
       console.error('[Visit] Failed to parse pending visits:', error);
@@ -108,72 +104,97 @@ window.electronAPI.onPokemonSwitch((species) => {
 
 // === Multi-Sprite Visitor Functions ===
 
-function showVisitor(species, visitorUsername) {
-  try {
-    // If visitor already exists, hide it first
-    if (visitorAnimation) {
-      console.log('Replacing existing visitor');
-      hideVisitor();
-    }
-    
-    console.log(`Showing visitor: ${visitorUsername}'s ${species}`);
-    
-    // Validate species
-    const validSpecies = ['bulbasaur', 'charmander', 'squirtle'];
-    if (!validSpecies.includes(species)) {
-      throw new Error(`Invalid species: ${species}`);
-    }
-    
-    // Create visitor animation
-    visitorAnimation = new AnimationStateMachine(species, visitorSprite);
-    visitorAnimation.setState('play'); // Both Pokémon play together
-    visitorAnimation.start();
-    
-    // Show visitor container
-    visitorContainer.style.display = 'block';
-    
-    // Position visitor relative to host
-    updateVisitorPosition();
-    
-    console.log(`Visitor sprite shown: ${visitorUsername}'s ${species}`);
-  } catch (error) {
-    console.error('Failed to show visitor sprite:', error);
-    hideVisitor();
-  }
-}
-
-function hideVisitor() {
-  // Gracefully handle case where no visitor is present
-  if (!visitorAnimation && visitorContainer.style.display === 'none') {
-    console.log('No visitor to hide');
+function addVisitor(visit) {
+  const { id: visitId, visitorUsername, pokemonSpecies } = visit;
+  
+  console.log(`[Visit] Adding visitor ${visitId}: ${visitorUsername}'s ${pokemonSpecies}`);
+  
+  // Validate species
+  const validSpecies = ['bulbasaur', 'charmander', 'squirtle'];
+  if (!validSpecies.includes(pokemonSpecies)) {
+    console.error(`[Visit] Invalid species: ${pokemonSpecies}`);
     return;
   }
   
-  console.log('Hiding visitor sprite');
+  // Create visitor container
+  const container = document.createElement('div');
+  container.id = `visitor-container-${visitId}`;
+  container.style.position = 'absolute';
+  container.style.display = 'block';
   
-  if (visitorAnimation) {
-    visitorAnimation.stop();
-    visitorAnimation = null;
-  }
+  // Create visitor sprite
+  const sprite = document.createElement('img');
+  sprite.id = `visitor-sprite-${visitId}`;
+  sprite.className = 'sprite';
+  sprite.draggable = false;
+  sprite.alt = `${visitorUsername}'s ${pokemonSpecies}`;
+  sprite.dataset.visitId = visitId; // Attach visitId for context menu
   
-  visitorContainer.style.display = 'none';
-  visitorSprite.src = '';
+  container.appendChild(sprite);
+  document.body.appendChild(container);
+  
+  // Position visitor at progressive horizontal offset
+  const visitorIndex = visitors.length;
+  const xOffset = visitorIndex * 100; // 100px spacing (96px sprite + 4px gap)
+  const yOffset = 50; // Fixed vertical offset
+  
+  container.style.left = `${xOffset}px`;
+  container.style.top = `${yOffset}px`;
+  
+  // Create animation state machine
+  const animation = new AnimationStateMachine(pokemonSpecies, sprite);
+  animation.setState('play'); // Visitors play together
+  animation.start();
+  
+  // Attach context menu handler
+  sprite.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showVisitorContextMenu(visitId);
+  });
+  
+  // Track visitor
+  visitors.push({
+    visitId,
+    species: pokemonSpecies,
+    username: visitorUsername,
+    container,
+    sprite,
+    animation
+  });
+  
+  console.log(`[Visit] Visitor ${visitId} added at position (${xOffset}, ${yOffset}). Total visitors: ${visitors.length}`);
 }
 
-function updateVisitorPosition() {
-  if (!visitorAnimation) return;
+function removeVisitor(visitId) {
+  console.log(`[Visit] Removing visitor ${visitId}`);
   
-  try {
-    // Host is at 0,0 within the window
-    // Visitor should be offset from host
-    const visitorX = 100; // 100px to the right
-    const visitorY = 50;  // 50px down
-    
-    visitorContainer.style.left = `${visitorX}px`;
-    visitorContainer.style.top = `${visitorY}px`;
-  } catch (error) {
-    console.error('Failed to update visitor position:', error);
+  const index = visitors.findIndex(v => v.visitId === visitId);
+  
+  if (index === -1) {
+    console.warn(`[Visit] Visitor ${visitId} not found`);
+    return;
   }
+  
+  // Stop animation and remove DOM
+  const visitor = visitors[index];
+  visitor.animation.stop();
+  visitor.container.remove();
+  
+  // Remove from array
+  visitors.splice(index, 1);
+  
+  console.log(`[Visit] Visitor ${visitId} removed. Remaining visitors: ${visitors.length}`);
+  
+  // Close gaps by repositioning remaining visitors
+  visitors.forEach((v, idx) => {
+    const xOffset = idx * 100;
+    v.container.style.left = `${xOffset}px`;
+  });
+}
+
+function showVisitorContextMenu(visitId) {
+  console.log(`[Visit] Showing context menu for visitor ${visitId}`);
+  window.electronAPI.showVisitorContextMenu(visitId);
 }
 
 // === Drag and Drop (Host Only) ===
@@ -193,23 +214,8 @@ hostSprite.addEventListener('mouseleave', () => {
   }
 });
 
-// Visitor sprite event listeners (identical pattern to host)
-visitorSprite.addEventListener('mouseenter', () => {
-  if (!dialogOpen) {
-    window.electronAPI.setIgnoreMouseEvents(false);
-  }
-});
-
-visitorSprite.addEventListener('mouseleave', () => {
-  if (!dialogOpen) {
-    window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
-  }
-});
-
-visitorSprite.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  window.electronAPI.showVisitorContextMenu();
-});
+// Visitor sprites get event listeners dynamically in addVisitor()
+// Each visitor container/sprite is created on-demand with its own handlers
 
 // Manual drag implementation (avoiding -webkit-app-region which blocks context menu)
 hostSprite.addEventListener('mousedown', (e) => {
@@ -751,21 +757,21 @@ window.electronAPI.onSendVisit(async ({ hostUserId, hostUsername, pokemonSpecies
 
 // === Send Home Flow ===
 
-window.electronAPI.onSendHome(async () => {
-  if (!currentVisitId) {
-    console.error('[Visit] No active visit to end');
+window.electronAPI.onSendHome(async (visitId) => {
+  if (!visitId) {
+    console.error('[Visit] No visitId provided to onSendHome');
     return;
   }
   
   try {
-    console.log(`[Visit] Ending visit ${currentVisitId}...`);
+    console.log(`[Visit] Ending visit ${visitId}...`);
     
     const response = await window.auth.authenticatedFetch('/visits/end', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ visit_id: currentVisitId })
+      body: JSON.stringify({ visit_id: visitId })
     });
     
     if (!response.ok) {
@@ -774,8 +780,7 @@ window.electronAPI.onSendHome(async () => {
     }
     
     console.log('[Visit] Visit ended successfully');
-    hideVisitor();
-    currentVisitId = null;
+    removeVisitor(visitId);
     alert('Visitor sent home!');
   } catch (error) {
     console.error('[Visit] End visit failed:', error);

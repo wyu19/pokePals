@@ -215,12 +215,12 @@ function createWindow() {
   });
 
   // Handle visitor context menu request
-  ipcMain.on('show-visitor-context-menu', (event) => {
+  ipcMain.on('show-visitor-context-menu', (event, visitId) => {
     const menu = Menu.buildFromTemplate([
       {
         label: 'Send Home',
         click: () => {
-          event.sender.send('send-home');
+          event.sender.send('send-home', visitId);
         }
       }
     ]);
