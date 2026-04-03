@@ -15,16 +15,16 @@ class AnimationStateMachine {
     this.frameCounts = {
       idle: 2,
       drag: 2,
-      eat: 8,      // 8-frame feed sequence
-      play: 8      // 8-frame play sequence
+      eat: 36,     // 36-frame feed sequence
+      play: 36     // 36-frame play sequence
     };
     
     // FPS per state
     this.stateFPS = {
       idle: 3,     // 3 FPS for subtle idle loop
       drag: 6,     // 6 FPS for drag (faster for responsiveness)
-      eat: 4,      // 4 FPS for eating animation (~2s total loop)
-      play: 4      // 4 FPS for play animation
+      eat: 6,      // 6 FPS for eating animation (~6s total)
+      play: 8      // 8 FPS for play animation (~4.5s total)
     };
     
     console.log(`Animation state machine initialized for ${species}`);
