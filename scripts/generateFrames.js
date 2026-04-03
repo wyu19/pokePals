@@ -31,8 +31,22 @@ const TRANSFORMATIONS = {
     { name: 'drag-2', tiltDegrees: 4, squashPercent: 8, description: 'tilt +4deg, squash 8%' }
   ],
   eat: [
-    { name: 'eat-1', mouthShift: 3, description: 'mouth shift down 3px' },
-    { name: 'eat-2', mouthShift: -2, description: 'mouth shift up 2px' }
+    // Frame 1: Idle/base pose - no transformation
+    { name: 'eat-1', verticalShift: 0, description: 'idle base pose (no shift)' },
+    // Frame 2: Notice food - head tilts forward slightly
+    { name: 'eat-2', verticalShift: 2, description: 'notice food (+2px forward tilt)' },
+    // Frame 3: Grab food - slight lift, hands-raised simulation (food compositing added in T02)
+    { name: 'eat-3', verticalShift: 1, description: 'grab food (+1px vertical lift)' },
+    // Frame 4: Bite - mouth opens wider (2px taller vertical stretch in bite region)
+    { name: 'eat-4', verticalShift: 0, mouthOpen: 2, description: 'bite (mouth open +2px, food overlaps)' },
+    // Frame 5: Chew left - mouth closed, left cheek bulge
+    { name: 'eat-5', verticalShift: 0, cheekBulge: 'left', bulgeAmount: 2, description: 'chew left (left cheek +2px horizontal bulge)' },
+    // Frame 6: Chew right - right cheek bulge
+    { name: 'eat-6', verticalShift: 0, cheekBulge: 'right', bulgeAmount: 2, description: 'chew right (right cheek +2px horizontal bulge)' },
+    // Frame 7: Happy chew - slight bounce, content expression
+    { name: 'eat-7', verticalShift: 1, description: 'happy chew (+1px bounce, satisfied)' },
+    // Frame 8: Swallow - head tilts back, satisfied return to idle
+    { name: 'eat-8', verticalShift: -2, description: 'swallow (head tilt back -2px, satisfied)' }
   ],
   play: [
     { name: 'play-1', bounceDistance: 4, description: 'bounce up 4px' },
@@ -149,7 +163,8 @@ async function generateStateFrames(species, state, baseSpritePath) {
 
     if (state === 'idle' || state === 'eat' || state === 'play') {
       // Simple vertical shift
-      const shiftAmount = transform.verticalShift || transform.mouthShift || transform.bounceDistance;
+      // Use ?? instead of || to handle 0 correctly
+      const shiftAmount = transform.verticalShift ?? transform.mouthShift ?? transform.bounceDistance ?? 0;
       transformedBuffer = await applyVerticalShift(baseBuffer, shiftAmount, width, height);
       console.log(`  ✓ ${transform.name}.png - ${transform.description}`);
     } else if (state === 'drag') {
