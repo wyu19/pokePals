@@ -160,7 +160,7 @@ describe('POST /api/visits', () => {
     expect(res.body.error).toContain('Cannot visit yourself');
   });
   
-  test('should return 409 if host already has active visitor', async () => {
+  test('should allow multiple visitors to same host', async () => {
     await createFriendship(visitor, host);
     await createFriendship(otherUser, host);
     
@@ -171,15 +171,17 @@ describe('POST /api/visits', () => {
       .send({ host_user_id: host.userId, pokemon_species: 'bulbasaur' });
     
     expect(res1.statusCode).toBe(201);
+    expect(res1.body).toHaveProperty('visitId');
     
-    // Second visit to same host fails
+    // Second concurrent visit to same host also succeeds
     const res2 = await request(app)
       .post('/api/visits')
       .set('Authorization', `Bearer ${otherUser.token}`)
       .send({ host_user_id: host.userId, pokemon_species: 'charmander' });
     
-    expect(res2.statusCode).toBe(409);
-    expect(res2.body.error).toContain('Host already has an active visitor');
+    expect(res2.statusCode).toBe(201);
+    expect(res2.body).toHaveProperty('visitId');
+    expect(res2.body.visitId).not.toBe(res1.body.visitId);
   });
   
   test('should require authentication', async () => {
@@ -401,6 +403,162 @@ describe('POST /api/visits/end', () => {
   });
 });
 
+describe('Concurrent visits', () => {
+  let visitor1, visitor2, visitor3, host;
+  
+  beforeEach(async () => {
+    visitor1 = await createAndLoginUser('visitor1');
+    visitor2 = await createAndLoginUser('visitor2');
+    visitor3 = await createAndLoginUser('visitor3');
+    host = await createAndLoginUser('host');
+    
+    // All visitors are friends with host
+    await createFriendship(visitor1, host);
+    await createFriendship(visitor2, host);
+    await createFriendship(visitor3, host);
+  });
+  
+  test('should allow 2+ visitors to same host simultaneously', async () => {
+    // First visit
+    const res1 = await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor1.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'bulbasaur' });
+    
+    expect(res1.statusCode).toBe(201);
+    
+    // Second visit
+    const res2 = await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor2.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'charmander' });
+    
+    expect(res2.statusCode).toBe(201);
+    
+    // Third visit
+    const res3 = await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor3.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'squirtle' });
+    
+    expect(res3.statusCode).toBe(201);
+    
+    // All 3 visitIds should be unique
+    const visitIds = [res1.body.visitId, res2.body.visitId, res3.body.visitId];
+    const uniqueIds = new Set(visitIds);
+    expect(uniqueIds.size).toBe(3);
+  });
+  
+  test('GET /api/visits/active should return all concurrent visits', async () => {
+    // Create 2 concurrent visits
+    await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor1.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'bulbasaur' });
+    
+    await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor2.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'charmander' });
+    
+    // Fetch active visits
+    const res = await request(app)
+      .get('/api/visits/active')
+      .set('Authorization', `Bearer ${host.token}`);
+    
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveLength(2);
+    
+    // Verify both visitors present
+    const visitorUsernames = res.body.map(v => v.visitorUsername).sort();
+    expect(visitorUsernames).toEqual(['visitor1', 'visitor2']);
+    
+    // Verify species
+    const species = res.body.map(v => v.pokemonSpecies).sort();
+    expect(species).toEqual(['bulbasaur', 'charmander']);
+  });
+  
+  test('POST /api/visits/end should dismiss only targeted visit, others remain', async () => {
+    // Create 3 concurrent visits
+    const res1 = await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor1.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'bulbasaur' });
+    
+    const res2 = await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor2.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'charmander' });
+    
+    const res3 = await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor3.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'squirtle' });
+    
+    const visitId2 = res2.body.visitId;
+    
+    // End middle visit
+    const endRes = await request(app)
+      .post('/api/visits/end')
+      .set('Authorization', `Bearer ${host.token}`)
+      .send({ visit_id: visitId2 });
+    
+    expect(endRes.statusCode).toBe(200);
+    
+    // Fetch active visits - should have 2 remaining
+    const fetchRes = await request(app)
+      .get('/api/visits/active')
+      .set('Authorization', `Bearer ${host.token}`);
+    
+    expect(fetchRes.statusCode).toBe(200);
+    expect(fetchRes.body).toHaveLength(2);
+    
+    // Verify visitor2 (charmander) is gone
+    const activeUsernames = fetchRes.body.map(v => v.visitorUsername).sort();
+    expect(activeUsernames).toEqual(['visitor1', 'visitor3']);
+    
+    // Verify correct species remain
+    const activeSpecies = fetchRes.body.map(v => v.pokemonSpecies).sort();
+    expect(activeSpecies).toEqual(['bulbasaur', 'squirtle']);
+  });
+  
+  test('expired visits excluded from active query regardless of count', async () => {
+    // Create 2 active visits
+    await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor1.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'bulbasaur' });
+    
+    await request(app)
+      .post('/api/visits')
+      .set('Authorization', `Bearer ${visitor2.token}`)
+      .send({ host_user_id: host.userId, pokemon_species: 'charmander' });
+    
+    // Insert 2 expired visits manually
+    db.prepare(`
+      INSERT INTO visits (visiting_user_id, host_user_id, pokemon_species, created_at, expires_at)
+      VALUES (?, ?, 'squirtle', datetime('now', '-48 hours'), datetime('now', '-24 hours'))
+    `).run(visitor3.userId, host.userId);
+    
+    db.prepare(`
+      INSERT INTO visits (visiting_user_id, host_user_id, pokemon_species, created_at, expires_at)
+      VALUES (?, ?, 'bulbasaur', datetime('now', '-72 hours'), datetime('now', '-48 hours'))
+    `).run(visitor1.userId, host.userId);
+    
+    // Fetch active - should only return 2 active, not 4 total
+    const res = await request(app)
+      .get('/api/visits/active')
+      .set('Authorization', `Bearer ${host.token}`);
+    
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveLength(2);
+    
+    // Verify only active visits returned
+    const species = res.body.map(v => v.pokemonSpecies).sort();
+    expect(species).toEqual(['bulbasaur', 'charmander']);
+  });
+});
+
 describe('Integration tests', () => {
   let visitor, host, otherUser;
   
@@ -471,32 +629,52 @@ describe('Integration tests', () => {
     expect(res.body[0].pokemonSpecies).toBe('bulbasaur');
   });
   
-  test('conflict prevention: host already has active visitor', async () => {
+  test('multiple concurrent visits: create → verify all active → end one → verify others remain', async () => {
     await createFriendship(visitor, host);
     await createFriendship(otherUser, host);
     
-    // First visit succeeds
+    // Create first visit
     const res1 = await request(app)
       .post('/api/visits')
       .set('Authorization', `Bearer ${visitor.token}`)
       .send({ host_user_id: host.userId, pokemon_species: 'bulbasaur' });
     
     expect(res1.statusCode).toBe(201);
+    const visitId1 = res1.body.visitId;
     
-    // Second concurrent visit fails
+    // Create second concurrent visit
     const res2 = await request(app)
       .post('/api/visits')
       .set('Authorization', `Bearer ${otherUser.token}`)
       .send({ host_user_id: host.userId, pokemon_species: 'charmander' });
     
-    expect(res2.statusCode).toBe(409);
-    expect(res2.body.error).toContain('Host already has an active visitor');
+    expect(res2.statusCode).toBe(201);
+    const visitId2 = res2.body.visitId;
     
-    // Verify only one active visit exists
-    const fetchRes = await request(app)
+    // Verify both are active
+    const fetchRes1 = await request(app)
       .get('/api/visits/active')
       .set('Authorization', `Bearer ${host.token}`);
     
-    expect(fetchRes.body).toHaveLength(1);
+    expect(fetchRes1.statusCode).toBe(200);
+    expect(fetchRes1.body).toHaveLength(2);
+    
+    // End first visit
+    const endRes = await request(app)
+      .post('/api/visits/end')
+      .set('Authorization', `Bearer ${host.token}`)
+      .send({ visit_id: visitId1 });
+    
+    expect(endRes.statusCode).toBe(200);
+    
+    // Verify only second visit remains
+    const fetchRes2 = await request(app)
+      .get('/api/visits/active')
+      .set('Authorization', `Bearer ${host.token}`);
+    
+    expect(fetchRes2.statusCode).toBe(200);
+    expect(fetchRes2.body).toHaveLength(1);
+    expect(fetchRes2.body[0].id).toBe(visitId2);
+    expect(fetchRes2.body[0].pokemonSpecies).toBe('charmander');
   });
 });

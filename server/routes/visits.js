@@ -44,19 +44,6 @@ router.post('/visits', authenticateToken, (req, res) => {
       return res.status(403).json({ error: 'Friendship required to visit' });
     }
     
-    // Check host does not have active visit
-    const existingVisit = db.prepare(`
-      SELECT id 
-      FROM visits 
-      WHERE host_user_id = ? 
-        AND expires_at > datetime('now') 
-        AND ended_at IS NULL
-    `).get(host_user_id);
-    
-    if (existingVisit) {
-      return res.status(409).json({ error: 'Host already has an active visitor' });
-    }
-    
     // Insert visit with 24-hour expiration
     const result = db.prepare(`
       INSERT INTO visits (visiting_user_id, host_user_id, pokemon_species, expires_at)
