@@ -79,8 +79,8 @@ async function main() {
   const frameCount = {
     'idle': 2,
     'drag': 2,
-    'eat': 8,
-    'play': 8
+    'eat': 36,
+    'play': 36
   }[animationState];
 
   if (!frameCount) {
