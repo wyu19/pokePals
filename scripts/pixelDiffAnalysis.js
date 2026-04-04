@@ -76,12 +76,14 @@ async function main() {
     process.exit(1);
   }
 
-  const frameCount = {
-    'idle': 2,
-    'drag': 2,
-    'eat': 36,
-    'play': 36
-  }[animationState];
+  // Frame counts updated for culled animations (M005/S06/T04)
+  const frameCounts = {
+    'bulbasaur': { 'idle': 2, 'drag': 2, 'eat': 21, 'play': 35 },
+    'charmander': { 'idle': 2, 'drag': 2, 'eat': 28, 'play': 21 },
+    'squirtle': { 'idle': 2, 'drag': 2, 'eat': 15, 'play': 36 }
+  };
+
+  const frameCount = frameCounts[species]?.[animationState];
 
   if (!frameCount) {
     console.error(`❌ Unknown animation state: ${animationState}`);
