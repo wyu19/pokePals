@@ -1,6 +1,13 @@
 // Animation State Machine for Pokemon sprites
 // Manages 4 states: idle (loop), drag (on mousedown), eat (one-shot), play (one-shot)
 
+// Frame counts per state (species-specific for eat/play culled animations)
+const FRAME_COUNTS = {
+  bulbasaur: { idle: 2, drag: 2, eat: 21, play: 35 },
+  charmander: { idle: 2, drag: 2, eat: 28, play: 21 },
+  squirtle: { idle: 2, drag: 2, eat: 15, play: 36 }
+};
+
 class AnimationStateMachine {
   constructor(species, spriteElement) {
     this.species = species;
@@ -11,13 +18,8 @@ class AnimationStateMachine {
     this.isRunning = false;
     this.animationFrameId = null;
     
-    // Frame counts per state
-    this.frameCounts = {
-      idle: 2,
-      drag: 2,
-      eat: 36,     // 36-frame feed sequence
-      play: 36     // 36-frame play sequence
-    };
+    // Load species-specific frame counts
+    this.frameCounts = FRAME_COUNTS[species] || FRAME_COUNTS.bulbasaur;
     
     // FPS per state
     this.stateFPS = {
@@ -109,6 +111,7 @@ class AnimationStateMachine {
   setSpecies(newSpecies) {
     console.log(`Animation species: ${this.species} → ${newSpecies}`);
     this.species = newSpecies;
+    this.frameCounts = FRAME_COUNTS[newSpecies] || FRAME_COUNTS.bulbasaur;
     this.frame = 0;
     this.updateSprite();
   }
