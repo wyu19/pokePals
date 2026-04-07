@@ -27,7 +27,8 @@ coverage/
 .cache/
 tmp/
 
-# Server files
+# Database files
+*.db
 server/.env
 server/node_modules
 server/server.db
