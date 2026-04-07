@@ -179,9 +179,10 @@ async function addVisitor(visit) {
   document.body.appendChild(container);
   
   // Position visitor at progressive horizontal offset
+  // Sprites are 256px wide, so offset by 260px to avoid overlap (256px + 4px gap)
   const visitorIndex = visitors.length;
-  const xOffset = visitorIndex * 100; // 100px spacing (96px sprite + 4px gap)
-  const yOffset = 50; // Fixed vertical offset
+  const xOffset = (visitorIndex + 1) * 260; // First visitor at 260px, second at 520px, third at 780px
+  const yOffset = 0; // Same vertical position as host
   
   container.style.left = `${xOffset}px`;
   container.style.top = `${yOffset}px`;
@@ -765,6 +766,10 @@ window.electronAPI.onSendVisit(async ({ hostUserId, hostUsername, pokemonSpecies
   try {
     console.log(`[Visit] Sending ${pokemonSpecies} to visit ${hostUsername}...`);
     
+    // Trigger visiting animation (play state) for the sender's Pokémon
+    hostAnimation.setState('play');
+    console.log(`[Visit] Triggered 'play' animation for visiting Pokémon`);
+    
     const response = await window.auth.authenticatedFetch('/visits', {
       method: 'POST',
       headers: {
@@ -800,7 +805,7 @@ window.electronAPI.onSendVisit(async ({ hostUserId, hostUsername, pokemonSpecies
     }
     
     console.log(`[Visit] Visit sent successfully (expires: ${data.expiresAt})`);
-    alert(`${pokemonSpecies.charAt(0).toUpperCase() + pokemonSpecies.slice(1)} is now visiting ${hostUsername}!`);
+    // Success - no alert needed, animation provides feedback
   } catch (error) {
     console.error('[Visit] Network error:', error);
     alert('Failed to send visit');
@@ -833,7 +838,7 @@ window.electronAPI.onSendHome(async (visitId) => {
     
     console.log('[Visit] Visit ended successfully');
     removeVisitor(visitId);
-    alert('Visitor sent home!');
+    // Visitor removed - no alert needed, visual feedback is sufficient
   } catch (error) {
     console.error('[Visit] End visit failed:', error);
     alert(`Failed to end visit: ${error.message}`);

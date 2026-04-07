@@ -28,8 +28,8 @@ function createWindow() {
   console.log(`Bulbasaur stats - Hunger: ${stats.hunger}, Happiness: ${stats.happiness}`);
   
   const windowOptions = {
-    width: 400,  // Increased to accommodate visitor sprite at offset
-    height: 350, // Increased to accommodate visitor sprite at offset
+    width: 1040, // Host (256px) + 3 visitors (260px spacing each = 780px) = 1036px
+    height: 350, // Height for sprites
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -56,8 +56,8 @@ function createWindow() {
   console.log('[Main] Loading login screen...');
   mainWindow.loadFile(path.join(__dirname, 'login.html'));
 
-  // DevTools disabled - dialog interaction fixed
-  // mainWindow.webContents.openDevTools({ mode: 'detach' });
+  // DevTools enabled for debugging
+  mainWindow.webContents.openDevTools({ mode: 'detach' });
 
   // Login screen needs full mouse interaction - DO NOT enable click-through yet
   // Click-through will be enabled when transitioning to overlay in login-success handler

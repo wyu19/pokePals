@@ -38,8 +38,8 @@ function init() {
   
   console.log('[Auth UI] Login form initialized in login mode');
   
-  // Auto-validate token on startup
-  autoValidateToken();
+  // Auto-validate token disabled for UAT testing
+  // autoValidateToken();
 }
 
 /**
