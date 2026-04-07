@@ -559,6 +559,91 @@ describe('Concurrent visits', () => {
   });
 });
 
+describe('Load test: 10 simultaneous visits', () => {
+  let host, visitors;
+  
+  beforeEach(async () => {
+    host = await createAndLoginUser('host');
+    
+    // Create 10 visitor users with accepted friendships
+    visitors = [];
+    for (let i = 1; i <= 10; i++) {
+      const visitor = await createAndLoginUser(`visitor${i}`);
+      await createFriendship(visitor, host);
+      visitors.push(visitor);
+    }
+  });
+  
+  test('should handle 10 concurrent POST /api/visits and return all in GET /api/visits/active in <5s', async () => {
+    // Fire 10 concurrent POST requests
+    const createPromises = visitors.map((visitor, index) => {
+      const species = ['bulbasaur', 'charmander', 'squirtle'][index % 3];
+      return request(app)
+        .post('/api/visits')
+        .set('Authorization', `Bearer ${visitor.token}`)
+        .send({ host_user_id: host.userId, pokemon_species: species });
+    });
+    
+    const createStartTime = Date.now();
+    const createResults = await Promise.all(createPromises);
+    const createDuration = Date.now() - createStartTime;
+    
+    // Verify all 10 POSTs succeeded
+    expect(createResults.every(res => res.statusCode === 201)).toBe(true);
+    
+    // Verify all visitIds are unique
+    const visitIds = createResults.map(res => res.body.visitId);
+    const uniqueIds = new Set(visitIds);
+    expect(uniqueIds.size).toBe(10);
+    
+    console.log(`[Load Test] Created 10 concurrent visits in ${createDuration}ms`);
+    
+    // Measure GET /api/visits/active response time
+    const getStartTime = Date.now();
+    const getRes = await request(app)
+      .get('/api/visits/active')
+      .set('Authorization', `Bearer ${host.token}`);
+    const getDuration = Date.now() - getStartTime;
+    
+    // Verify all 10 visits returned
+    expect(getRes.statusCode).toBe(200);
+    expect(getRes.body).toHaveLength(10);
+    
+    // Verify response time <5s (5000ms)
+    expect(getDuration).toBeLessThan(5000);
+    
+    console.log(`[Load Test] GET /api/visits/active returned 10 visits in ${getDuration}ms`);
+    
+    // Verify all visitor usernames present
+    const visitorUsernames = getRes.body.map(v => v.visitorUsername).sort();
+    const expectedUsernames = visitors.map((_, i) => `visitor${i + 1}`).sort();
+    expect(visitorUsernames).toEqual(expectedUsernames);
+  });
+  
+  test('should maintain isolation: 10 visitors to host A should not appear in host B active list', async () => {
+    const hostB = await createAndLoginUser('hostB');
+    
+    // Create 10 visits to host A
+    const createPromises = visitors.map((visitor, index) => {
+      const species = ['bulbasaur', 'charmander', 'squirtle'][index % 3];
+      return request(app)
+        .post('/api/visits')
+        .set('Authorization', `Bearer ${visitor.token}`)
+        .send({ host_user_id: host.userId, pokemon_species: species });
+    });
+    
+    await Promise.all(createPromises);
+    
+    // Host B should see empty list (not host A's 10 visits)
+    const res = await request(app)
+      .get('/api/visits/active')
+      .set('Authorization', `Bearer ${hostB.token}`);
+    
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveLength(0);
+  });
+});
+
 describe('Integration tests', () => {
   let visitor, host, otherUser;
   
